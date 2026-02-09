@@ -460,7 +460,7 @@ function setupTaskDragAndDrop() {
       const fromColumnId = e.dataTransfer.getData('application/column-id')
 
       if (taskId && fromColumnId) {
-        const dropIndex = calculateDropIndex(tasksContainer, e.clientY, fromColumnId, columnId)
+        const dropIndex = calculateDropIndex(tasksContainer, e.clientY, fromColumnId, columnId, taskId)
         
         vscode.postMessage({
           type: 'moveTask',
@@ -478,7 +478,7 @@ function setupTaskDragAndDrop() {
   })
 }
 
-function calculateDropIndex(tasksContainer, clientY, fromColumnId, toColumnId) {
+function calculateDropIndex(tasksContainer, clientY, fromColumnId, toColumnId, draggedTaskId) {
   const tasks = Array.from(tasksContainer.children)
   let dropIndex = tasks.length
 
@@ -494,7 +494,7 @@ function calculateDropIndex(tasksContainer, clientY, fromColumnId, toColumnId) {
   }
 
   if (fromColumnId === toColumnId) {
-    const draggedTaskElement = tasksContainer.querySelector('[data-task-id="' + e.dataTransfer.getData('text/plain') + '"]')
+    const draggedTaskElement = tasksContainer.querySelector('[data-task-id="' + draggedTaskId + '"]')
     if (draggedTaskElement) {
       const currentIndex = Array.from(tasks).indexOf(draggedTaskElement)
       if (dropIndex > currentIndex) {
