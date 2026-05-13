@@ -1,0 +1,13 @@
+Mpi-Kanban VS Code extension
+
+This project is a fork of Markdown Kanban by holooooo:
+https://github.com/holooooo/markdown-kanban
+
+The upstream project is licensed under the MIT License. The original copyright
+notice is preserved in LICENSE:
+
+Copyright (c) 2024 holooooo
+
+Mad Pony Interactive maintains this fork for the MPI agent workflow. Changes in
+this fork include MPI-specific extension branding, command/config namespacing,
+and targeting the workspace board at .claude/mpi-kanban/kanban.md.

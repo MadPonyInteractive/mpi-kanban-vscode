@@ -1,3 +1,11 @@
+## [0.1.0] (2026-05-13)
+
+### Fork
+
+* Rename the extension to Mpi-Kanban for the MPI agent workflow.
+* Target `.claude/mpi-kanban/kanban.md` in the current workspace instead of switching between arbitrary Markdown files.
+* Add explicit fork attribution in `NOTICE`.
+
 ## [1.0.2] (2025-06-04)
 
 ### Features

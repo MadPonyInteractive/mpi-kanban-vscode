@@ -6,7 +6,7 @@ import { MarkdownKanbanParser, KanbanBoard, KanbanTask, KanbanColumn } from './m
 
 export class KanbanWebviewPanel {
     public static currentPanel: KanbanWebviewPanel | undefined;
-    public static readonly viewType = 'markdownKanbanPanel';
+    public static readonly viewType = 'mpiKanbanPanel';
 
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
@@ -28,7 +28,7 @@ export class KanbanWebviewPanel {
 
         const panel = vscode.window.createWebviewPanel(
             KanbanWebviewPanel.viewType,
-            'Markdown Kanban',
+            'Mpi-Kanban',
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -137,7 +137,7 @@ export class KanbanWebviewPanel {
 
         this._panel.webview.html = this._getHtmlForWebview();
         
-        const board = this._board || { title: 'Please open a Markdown Kanban file', columns: [] };
+        const board = this._board || { title: 'Open an MPI Kanban file', columns: [] };
         this._panel.webview.postMessage({
             type: 'updateBoard',
             board: board
@@ -148,7 +148,7 @@ export class KanbanWebviewPanel {
         if (!this._document || !this._board) return;
 
         // 获取配置设置
-        const config = vscode.workspace.getConfiguration('markdown-kanban');
+        const config = vscode.workspace.getConfiguration('mpi-kanban');
         const taskHeaderFormat = config.get<'title' | 'list'>('taskHeader', 'title');
 
         const markdown = MarkdownKanbanParser.generateMarkdown(this._board, taskHeaderFormat);
