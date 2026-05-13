@@ -1,23 +1,22 @@
-# 排除源代码和开发文件
-src/**/*.ts
-src/test/**
-*.map
+# Source files are bundled into dist for publishing.
+src/**
+**/*.map
 
-# 排除构建工具配置
+# Build tooling.
 esbuild.js
 tsconfig.json
 eslint.config.mjs
+.vscode-test.mjs
 
-# 排除依赖和锁定文件
+# Development dependencies and repository metadata.
 node_modules
 .git
 .gitignore
+.github/**
+.vscode/**
 pnpm-lock.yaml
 package-lock.json
 
-# 排除开发文档
-CHANGELOG.md
-
-# 确保包含必要的静态资源
-!src/html/**
-!imgs/**
+# Marketplace icon.
+imgs/**
+!imgs/logo.png

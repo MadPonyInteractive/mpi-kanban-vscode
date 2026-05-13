@@ -1,22 +1,37 @@
 # Mpi-Kanban
 
-Mpi-Kanban is a VS Code extension for viewing and editing the Kanban board used
-by the MPI agent workflow plugin.
+Mpi-Kanban is the VS Code companion extension for the Mad Pony Interactive
+Kanban workflow.
 
-The extension targets this board in the current workspace:
+It renders the workflow board used by the
+[Mpi-Kanban agent plugin](https://github.com/MadPonyInteractive/mpi-kanban) as
+an interactive Kanban view inside VS Code. The plugin owns the workflow: it
+creates plans, moves work through the board, writes handoffs, and keeps the
+Markdown state current. This extension owns the editor experience for that
+board.
+
+The agent plugin repository is private while the workflow is being prepared for
+release. The link above is the intended public home for the workflow plugin.
+
+## What It Opens
+
+The extension watches one board file in the current workspace:
 
 ```text
 .claude/mpi-kanban/kanban.md
 ```
 
-The board file does not need to be open in an editor. Use **Mpi-Kanban: Open
-Mpi-Kanban Board** from the Command Palette, or the editor title action when
-viewing the workspace `kanban.md`. When the MPI plugin saves the board file,
-the open Kanban view reloads from disk.
+When that file exists, run **Mpi-Kanban: Open Mpi-Kanban Board** from the
+Command Palette. The board can stay open while the workflow plugin edits the
+Markdown file; changes are reloaded from disk.
 
-## Compatibility
+Without the workflow plugin, the extension can still display a compatible
+Markdown board, but it is designed for the Mpi-Kanban board contract rather than
+general-purpose Markdown kanban files.
 
-The expected board columns are:
+## Board Contract
+
+The board must use these columns:
 
 ```markdown
 ## BACKLOG
@@ -25,7 +40,7 @@ The expected board columns are:
 ## COMPLETED
 ```
 
-The supported task metadata fields match the MPI plugin schema:
+Supported task metadata fields:
 
 - `due`
 - `tags`
@@ -34,12 +49,44 @@ The supported task metadata fields match the MPI plugin schema:
 - `defaultExpanded`
 - `steps`
 
+The workflow plugin may also add a plan reference inside task bodies:
+
+```text
+Plan file: docs/plans/YYYY-MM-DD-example.md
+```
+
+Do not add custom columns or metadata fields unless the workflow plugin and this
+extension are updated together.
+
+## Install
+
+Install from the VS Code Marketplace:
+
+```text
+MadPonyInteractive.mpi-kanban
+```
+
+The board file is created by the workflow plugin when you start or continue MPI
+work. If you are testing the extension without the plugin, create
+`.claude/mpi-kanban/kanban.md` manually using the columns above.
+
 ## Development
 
 ```bash
 npm install
 npm run compile
 ```
+
+Create a local VSIX package:
+
+```bash
+npm exec -- vsce package
+```
+
+## Publishing
+
+See [PUBLISHING.md](./PUBLISHING.md) for Marketplace account setup, GitHub
+Actions secrets, and the release process.
 
 ## Attribution
 
