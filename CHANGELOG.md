@@ -1,3 +1,11 @@
+## [0.1.4] (2026-05-13)
+
+### Fixes
+
+* Reload the board from disk when agents update `.claude/mpi-kanban/kanban.md` outside VS Code.
+* Add a lightweight modified-time polling fallback for missed filesystem watcher events.
+* Remove the column archive button and extension-side archive UI.
+
 ## [0.1.3] (2026-05-13)
 
 ### Fixes
