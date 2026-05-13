@@ -320,11 +320,16 @@ export class KanbanWebviewPanel {
     }
 
     private _getHtmlForWebview() {
-        const filePath = vscode.Uri.file(path.join(this._context.extensionPath, 'src', 'html', 'webview.html'));
+        const packagedHtmlPath = path.join(this._context.extensionPath, 'dist', 'src', 'html', 'webview.html');
+        const developmentHtmlPath = path.join(this._context.extensionPath, 'src', 'html', 'webview.html');
+        const htmlDir = fs.existsSync(packagedHtmlPath)
+            ? path.dirname(packagedHtmlPath)
+            : path.dirname(developmentHtmlPath);
+        const filePath = vscode.Uri.file(path.join(htmlDir, 'webview.html'));
         let html = fs.readFileSync(filePath.fsPath, 'utf8');
 
         const baseWebviewUri = this._panel.webview.asWebviewUri(
-            vscode.Uri.file(path.join(this._context.extensionPath, 'src', 'html'))
+            vscode.Uri.file(htmlDir)
         );
 
         html = html.replace(/<head>/, `<head><base href="${baseWebviewUri.toString()}/">`);

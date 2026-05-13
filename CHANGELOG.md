@@ -1,3 +1,9 @@
+## [0.1.1] (2026-05-13)
+
+### Fixes
+
+* Load webview HTML from packaged `dist` assets so the Marketplace build renders the board.
+
 ## [0.1.0] (2026-05-13)
 
 ### Fork
