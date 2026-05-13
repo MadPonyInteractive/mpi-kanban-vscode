@@ -109,13 +109,7 @@ function createControlsContainer() {
   showFiltersBtn.onclick = () => toggleFilters(true)
   showFiltersBtn.id = 'show-filters-dynamic'
 
-  const addColumnBtn = document.createElement('button')
-  addColumnBtn.className = 'add-column-btn'
-  addColumnBtn.textContent = '+ Add Column'
-  addColumnBtn.onclick = () => addColumn()
-
   controlsContainer.appendChild(showFiltersBtn)
-  controlsContainer.appendChild(addColumnBtn)
 
   const header = document.getElementById('kanban-header')
   if (header?.classList.contains('visible')) {
@@ -1478,6 +1472,7 @@ function setupStepsInput () {
 document.addEventListener('DOMContentLoaded', () => {
   setupTagsInput()
   setupStepsInput()
+  vscode.postMessage({ type: 'ready' })
 
   // Tag filtering
   document.getElementById('tag-filter').addEventListener('input', e => {

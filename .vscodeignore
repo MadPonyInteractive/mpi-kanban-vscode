@@ -20,3 +20,4 @@ package-lock.json
 # Marketplace icon.
 imgs/**
 !imgs/logo.png
+!imgs/board.png

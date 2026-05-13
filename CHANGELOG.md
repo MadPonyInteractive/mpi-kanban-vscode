@@ -1,3 +1,11 @@
+## [0.1.3] (2026-05-13)
+
+### Fixes
+
+* Reload the MPI board when VS Code restores an existing Mpi-Kanban webview after restart.
+* Resend board data after the webview script signals readiness.
+* Remove the custom add-column button from the MPI fixed-column board UI.
+
 ## [0.1.2] (2026-05-13)
 
 ### Documentation

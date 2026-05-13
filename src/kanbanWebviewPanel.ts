@@ -50,6 +50,7 @@ export class KanbanWebviewPanel {
             localResourceRoots: [extensionUri],
         };
         KanbanWebviewPanel.currentPanel = new KanbanWebviewPanel(panel, extensionUri, context);
+        return KanbanWebviewPanel.currentPanel;
     }
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
@@ -117,6 +118,9 @@ export class KanbanWebviewPanel {
             case 'toggleColumnArchive':
                 this.toggleColumnArchive(message.columnId, message.archived);
                 break;
+            case 'ready':
+                this.postBoard();
+                break;
         }
     }
 
@@ -138,6 +142,10 @@ export class KanbanWebviewPanel {
         this._panel.webview.html = this._getHtmlForWebview();
         
         const board = this._board || { title: 'Open an MPI Kanban file', columns: [] };
+        this.postBoard(board);
+    }
+
+    private postBoard(board = this._board || { title: 'Open an MPI Kanban file', columns: [] }) {
         this._panel.webview.postMessage({
             type: 'updateBoard',
             board: board

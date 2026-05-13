@@ -14,8 +14,10 @@ function getCandidateKanbanUris(): vscode.Uri[] {
 	return folders.map(folder => vscode.Uri.joinPath(folder.uri, ...KANBAN_RELATIVE_PATH.split('/')));
 }
 
-async function findWorkspaceKanbanUri(): Promise<vscode.Uri | undefined> {
-	for (const uri of getCandidateKanbanUris()) {
+async function findWorkspaceKanbanUri(requireExists = false): Promise<vscode.Uri | undefined> {
+	const candidates = getCandidateKanbanUris();
+
+	for (const uri of candidates) {
 		try {
 			await vscode.workspace.fs.stat(uri);
 			return uri;
@@ -24,7 +26,7 @@ async function findWorkspaceKanbanUri(): Promise<vscode.Uri | undefined> {
 		}
 	}
 
-	return getCandidateKanbanUris()[0];
+	return requireExists ? undefined : candidates[0];
 }
 
 function isWorkspaceKanbanUri(uri: vscode.Uri): boolean {
@@ -59,7 +61,17 @@ export function activate(context: vscode.ExtensionContext) {
 	if (vscode.window.registerWebviewPanelSerializer) {
 		vscode.window.registerWebviewPanelSerializer(KanbanWebviewPanel.viewType, {
 			async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-				KanbanWebviewPanel.revive(webviewPanel, context.extensionUri, context);
+				const panel = KanbanWebviewPanel.revive(webviewPanel, context.extensionUri, context);
+				const kanbanUri = await findWorkspaceKanbanUri(true);
+
+				if (!kanbanUri) {
+					await vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
+					return;
+				}
+
+				const document = await vscode.workspace.openTextDocument(kanbanUri);
+				panel.loadMarkdownFile(document);
+				await vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
 			}
 		});
 	}
