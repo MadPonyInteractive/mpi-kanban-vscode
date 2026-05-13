@@ -1,3 +1,10 @@
+## [0.1.2] (2026-05-13)
+
+### Documentation
+
+* Update Marketplace README wording now that the Mpi-Kanban agent plugin is published.
+* Document manual Marketplace update flow as the default release process.
+
 ## [0.1.1] (2026-05-13)
 
 ### Fixes

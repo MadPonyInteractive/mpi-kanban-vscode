@@ -1,6 +1,6 @@
 # Mpi-Kanban
 
-Mpi-Kanban is the VS Code companion extension for the Mad Pony Interactive
+Mpi-Kanban is the VS Code companion extension for the MadPonyInteractive
 Kanban workflow.
 
 It renders the workflow board used by the
@@ -10,8 +10,8 @@ creates plans, moves work through the board, writes handoffs, and keeps the
 Markdown state current. This extension owns the editor experience for that
 board.
 
-The agent plugin repository is private while the workflow is being prepared for
-release. The link above is the intended public home for the workflow plugin.
+The agent plugin repository is the public home for the workflow that creates and
+maintains the board this extension displays.
 
 ## What It Opens
 
