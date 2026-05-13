@@ -57,6 +57,8 @@ async function openWorkspaceKanban(context: vscode.ExtensionContext, uri?: vscod
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Mpi-Kanban extension is now active.');
+	let reloadTimer: NodeJS.Timeout | undefined;
+	let lastSeenMtime = 0;
 
 	if (vscode.window.registerWebviewPanelSerializer) {
 		vscode.window.registerWebviewPanelSerializer(KanbanWebviewPanel.viewType, {
@@ -93,8 +95,28 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const document = await vscode.workspace.openTextDocument(uri);
-		KanbanWebviewPanel.currentPanel.loadMarkdownFile(document);
+		try {
+			const stat = await vscode.workspace.fs.stat(uri);
+			lastSeenMtime = stat.mtime;
+		} catch {
+			// The file may have been deleted between the watcher event and reload.
+		}
+
+		const [document, content] = await Promise.all([
+			vscode.workspace.openTextDocument(uri),
+			vscode.workspace.fs.readFile(uri)
+		]);
+		KanbanWebviewPanel.currentPanel.loadMarkdownContent(Buffer.from(content).toString('utf8'), document);
+	};
+
+	const scheduleReloadKanban = (uri: vscode.Uri) => {
+		if (reloadTimer) {
+			clearTimeout(reloadTimer);
+		}
+
+		reloadTimer = setTimeout(() => {
+			void reloadKanban(uri);
+		}, 100);
 	};
 
 	const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
@@ -103,15 +125,41 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	const pollForExternalChanges = setInterval(() => {
+		if (!KanbanWebviewPanel.currentPanel) {
+			return;
+		}
+
+		void (async () => {
+			try {
+				const uri = await findWorkspaceKanbanUri(true);
+				if (!uri) {
+					return;
+				}
+
+				const stat = await vscode.workspace.fs.stat(uri);
+				if (lastSeenMtime !== 0 && stat.mtime === lastSeenMtime) {
+					return;
+				}
+
+				lastSeenMtime = stat.mtime;
+				scheduleReloadKanban(uri);
+			} catch {
+				// Ignore transient file access errors during external writes.
+			}
+		})();
+	}, 2000);
+
 	context.subscriptions.push(
 		openKanbanCommand,
 		kanbanWatcher,
-		kanbanWatcher.onDidCreate(reloadKanban),
-		kanbanWatcher.onDidChange(reloadKanban),
+		kanbanWatcher.onDidCreate(scheduleReloadKanban),
+		kanbanWatcher.onDidChange(scheduleReloadKanban),
 		kanbanWatcher.onDidDelete(async () => {
 			await vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
 		}),
 		saveListener,
+		new vscode.Disposable(() => clearInterval(pollForExternalChanges)),
 	);
 
 	if (getCandidateKanbanUris().length > 0) {

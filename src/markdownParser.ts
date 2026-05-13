@@ -15,7 +15,6 @@ export interface KanbanColumn {
   id: string;
   title: string;
   tasks: KanbanTask[];
-  archived?: boolean;
 }
 
 export interface KanbanBoard {
@@ -89,19 +88,11 @@ export class MarkdownKanbanParser {
         }
         
         let columnTitle = trimmedLine.substring(3).trim();
-        let isArchived = false;
-        
-        // 检查是否包含 [Archived] 标记
-        if (columnTitle.endsWith('[Archived]')) {
-          isArchived = true;
-          columnTitle = columnTitle.replace(/\s*\[Archived\]$/, '').trim();
-        }
         
         currentColumn = {
           id: this.generateId(),
           title: columnTitle,
-          tasks: [],
-          archived: isArchived
+          tasks: []
         };
         inTaskProperties = false;
         inTaskDescription = false;
@@ -263,8 +254,7 @@ export class MarkdownKanbanParser {
     }
 
     for (const column of board.columns) {
-      const columnTitle = column.archived ? `${column.title} [Archived]` : column.title;
-      markdown += `## ${columnTitle}\n\n`;
+      markdown += `## ${column.title}\n\n`;
 
       for (const task of column.tasks) {
         if (taskHeaderFormat === 'title') {

@@ -115,9 +115,6 @@ export class KanbanWebviewPanel {
             case 'reorderTaskSteps':
                 this.reorderTaskSteps(message.taskId, message.columnId, message.newOrder);
                 break;
-            case 'toggleColumnArchive':
-                this.toggleColumnArchive(message.columnId, message.archived);
-                break;
             case 'ready':
                 this.postBoard();
                 break;
@@ -126,8 +123,16 @@ export class KanbanWebviewPanel {
 
     public loadMarkdownFile(document: vscode.TextDocument) {
         this._document = document;
+        this.loadMarkdownContent(document.getText());
+    }
+
+    public loadMarkdownContent(content: string, document?: vscode.TextDocument) {
+        if (document) {
+            this._document = document;
+        }
+
         try {
-            this._board = MarkdownKanbanParser.parseMarkdown(document.getText());
+            this._board = MarkdownKanbanParser.parseMarkdown(content);
         } catch (error) {
             console.error('Error parsing Markdown:', error);
             vscode.window.showErrorMessage(`Kanban parsing error: ${error instanceof Error ? error.message : String(error)}`);
@@ -315,15 +320,6 @@ export class KanbanWebviewPanel {
         this._panel.webview.postMessage({
             type: 'toggleTaskExpansion',
             taskId: taskId
-        });
-    }
-
-    private toggleColumnArchive(columnId: string, archived: boolean) {
-        this.performAction(() => {
-            const column = this.findColumn(columnId);
-            if (!column) return;
-
-            column.archived = archived;
         });
     }
 
