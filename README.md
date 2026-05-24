@@ -126,8 +126,8 @@ npm exec -- vsce package
 
 ## Publishing
 
-See [PUBLISHING.md](./PUBLISHING.md) for Marketplace account setup, GitHub
-Actions secrets, and the release process.
+See [PUBLISHING.md](./PUBLISHING.md) for Marketplace account setup, manual
+Marketplace updates, and the GitHub Release process.
 
 ## Attribution
 

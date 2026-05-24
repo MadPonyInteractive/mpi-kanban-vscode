@@ -61,37 +61,25 @@ For a new Marketplace version:
 
 8. Wait for Marketplace verification to complete.
 
-## Optional GitHub Actions publishing
+## GitHub Release on tag
 
-The repository includes a `Publish` workflow, but it requires a Marketplace
-Personal Access Token. Do not create an Azure subscription just for this. If
-Azure DevOps asks for billing/subscription setup, skip automation and use the
-manual process above.
+The `Release` workflow runs on `v*.*.*` tags. It builds the VSIX, extracts the
+matching `CHANGELOG.md` section, and creates a GitHub Release with the VSIX
+attached. No Marketplace PAT or Azure subscription required.
 
-To enable automation later:
-
-1. Create an Azure DevOps personal access token with the Marketplace publish
-   scope.
-2. In the GitHub repository, add the token as an Actions secret:
-
-   ```text
-   VSCE_PAT
-   ```
-
-3. Commit the version bump and changelog update.
-4. Create and push a matching version tag:
-
-   ```bash
-   git tag v0.1.2
-   git push origin main
-   git push origin v0.1.2
-   ```
-
-The `Publish` GitHub Actions workflow runs on `v*.*.*` tags and publishes with:
+Tag and push to trigger a release:
 
 ```bash
-npm exec -- vsce publish --pat "$VSCE_PAT"
+git tag v0.1.6
+git push origin main
+git push origin v0.1.6
 ```
+
+Marketplace upload remains manual (see above). The GitHub Release is for
+distribution, changelog visibility, and VSIX archiving.
+
+To create a release for a tag that already exists, run the `Release` workflow
+via **Actions -> Release -> Run workflow** and supply the tag name.
 
 ## Icon requirements
 

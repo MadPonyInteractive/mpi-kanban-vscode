@@ -58,7 +58,7 @@ export class KanbanWebviewPanel {
         this._extensionUri = extensionUri;
         this._context = context;
 
-        this._update();
+        this._renderWebview();
         this._setupEventListeners();
         
         if (this._document) {
@@ -72,7 +72,7 @@ export class KanbanWebviewPanel {
         this._panel.onDidChangeViewState(
             e => {
                 if (e.webviewPanel.visible) {
-                    this._update();
+                    this.postBoard();
                 }
             },
             null,
@@ -86,34 +86,34 @@ export class KanbanWebviewPanel {
         );
     }
 
-    private _handleMessage(message: any) {
+    private async _handleMessage(message: any) {
         switch (message.type) {
             case 'moveTask':
-                this.moveTask(message.taskId, message.fromColumnId, message.toColumnId, message.newIndex);
+                await this.moveTask(message.taskId, message.fromColumnId, message.toColumnId, message.newIndex);
                 break;
             case 'addTask':
-                this.addTask(message.columnId, message.taskData);
+                await this.addTask(message.columnId, message.taskData);
                 break;
             case 'deleteTask':
-                this.deleteTask(message.taskId, message.columnId);
+                await this.deleteTask(message.taskId, message.columnId);
                 break;
             case 'editTask':
-                this.editTask(message.taskId, message.columnId, message.taskData);
+                await this.editTask(message.taskId, message.columnId, message.taskData);
                 break;
             case 'addColumn':
-                this.addColumn(message.title);
+                await this.addColumn(message.title);
                 break;
             case 'moveColumn':
-                this.moveColumn(message.fromIndex, message.toIndex);
+                await this.moveColumn(message.fromIndex, message.toIndex);
                 break;
             case 'toggleTask':
                 this.toggleTaskExpansion(message.taskId);
                 break;
             case 'updateTaskStep':
-                this.updateTaskStep(message.taskId, message.columnId, message.stepIndex, message.completed);
+                await this.updateTaskStep(message.taskId, message.columnId, message.stepIndex, message.completed);
                 break;
             case 'reorderTaskSteps':
-                this.reorderTaskSteps(message.taskId, message.columnId, message.newOrder);
+                await this.reorderTaskSteps(message.taskId, message.columnId, message.newOrder);
                 break;
             case 'ready':
                 this.postBoard();
@@ -138,16 +138,13 @@ export class KanbanWebviewPanel {
             vscode.window.showErrorMessage(`Kanban parsing error: ${error instanceof Error ? error.message : String(error)}`);
             this._board = { title: 'Error Loading Board', columns: [] };
         }
-        this._update();
+        this.postBoard();
     }
 
-    private _update() {
+    private _renderWebview() {
         if (!this._panel.webview) return;
 
         this._panel.webview.html = this._getHtmlForWebview();
-        
-        const board = this._board || { title: 'Open an MPI Kanban file', columns: [] };
-        this.postBoard(board);
     }
 
     private postBoard(board = this._board || { title: 'Open an MPI Kanban file', columns: [] }) {
@@ -198,11 +195,11 @@ export class KanbanWebviewPanel {
         
         action();
         await this.saveToMarkdown();
-        this._update();
+        this.postBoard();
     }
 
-    private moveTask(taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) {
-        this.performAction(() => {
+    private async moveTask(taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) {
+        await this.performAction(() => {
             const fromColumn = this.findColumn(fromColumnId);
             const toColumn = this.findColumn(toColumnId);
 
@@ -216,8 +213,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private addTask(columnId: string, taskData: any) {
-        this.performAction(() => {
+    private async addTask(columnId: string, taskData: any) {
+        await this.performAction(() => {
             const column = this.findColumn(columnId);
             if (!column) return;
 
@@ -237,8 +234,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private deleteTask(taskId: string, columnId: string) {
-        this.performAction(() => {
+    private async deleteTask(taskId: string, columnId: string) {
+        await this.performAction(() => {
             const column = this.findColumn(columnId);
             if (!column) return;
 
@@ -249,8 +246,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private editTask(taskId: string, columnId: string, taskData: any) {
-        this.performAction(() => {
+    private async editTask(taskId: string, columnId: string, taskData: any) {
+        await this.performAction(() => {
             const result = this.findTask(columnId, taskId);
             if (!result) return;
 
@@ -267,8 +264,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private updateTaskStep(taskId: string, columnId: string, stepIndex: number, completed: boolean) {
-        this.performAction(() => {
+    private async updateTaskStep(taskId: string, columnId: string, stepIndex: number, completed: boolean) {
+        await this.performAction(() => {
             const result = this.findTask(columnId, taskId);
             if (!result?.task.steps || stepIndex < 0 || stepIndex >= result.task.steps.length) {
                 return;
@@ -278,8 +275,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private reorderTaskSteps(taskId: string, columnId: string, newOrder: number[]) {
-        this.performAction(() => {
+    private async reorderTaskSteps(taskId: string, columnId: string, newOrder: number[]) {
+        await this.performAction(() => {
             const result = this.findTask(columnId, taskId);
             if (!result?.task.steps) return;
 
@@ -292,8 +289,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private addColumn(title: string) {
-        this.performAction(() => {
+    private async addColumn(title: string) {
+        await this.performAction(() => {
             if (!this._board) return;
 
             const newColumn: KanbanColumn = {
@@ -306,8 +303,8 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private moveColumn(fromIndex: number, toIndex: number) {
-        this.performAction(() => {
+    private async moveColumn(fromIndex: number, toIndex: number) {
+        await this.performAction(() => {
             if (!this._board || fromIndex === toIndex) return;
 
             const columns = this._board.columns;

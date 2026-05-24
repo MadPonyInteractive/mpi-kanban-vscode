@@ -1,3 +1,10 @@
+## [0.1.6] (2026-05-24)
+
+### Fixes
+
+* Refresh the existing webview after board edits instead of rebuilding it, so dragged tasks move visually without requiring a manual Markdown save.
+* Replace the tag-triggered Marketplace publish workflow with a GitHub Release workflow that attaches a built VSIX without Azure DevOps or Marketplace PAT setup.
+
 ## [0.1.5] (2026-05-24)
 
 ### Fixes
