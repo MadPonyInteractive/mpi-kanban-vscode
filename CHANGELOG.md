@@ -1,4 +1,10 @@
-﻿## [0.1.4] (2026-05-13)
+## [0.1.5] (2026-05-24)
+
+### Fixes
+
+* Watch `.agents/mpi-kanban/kanban.md` to match the MPI agent skill pack's project layout.
+
+## [0.1.4] (2026-05-13)
 
 ### Fixes
 
