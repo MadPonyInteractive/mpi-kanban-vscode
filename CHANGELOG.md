@@ -1,8 +1,8 @@
-## [0.1.4] (2026-05-13)
+﻿## [0.1.4] (2026-05-13)
 
 ### Fixes
 
-* Reload the board from disk when agents update `.claude/mpi-kanban/kanban.md` outside VS Code.
+* Reload the board from disk when agents update `.agents/mpi-kanban/kanban.md` outside VS Code.
 * Add a lightweight modified-time polling fallback for missed filesystem watcher events.
 * Remove the column archive button and extension-side archive UI.
 
@@ -32,7 +32,7 @@
 ### Fork
 
 * Rename the extension to Mpi-Kanban for the MPI agent workflow.
-* Target `.claude/mpi-kanban/kanban.md` in the current workspace instead of switching between arbitrary Markdown files.
+* Target `.agents/mpi-kanban/kanban.md` in the current workspace instead of switching between arbitrary Markdown files.
 * Add explicit fork attribution in `NOTICE`.
 
 ## [1.0.2] (2025-06-04)
@@ -101,3 +101,4 @@
 ### Chore
 
 * **chore:** shorten command name to "Kanban"
+

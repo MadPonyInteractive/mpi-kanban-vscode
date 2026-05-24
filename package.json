@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "mpi-kanban",
   "displayName": "Mpi-Kanban",
   "description": "VS Code Kanban board for the MPI agent workflow.",
@@ -19,7 +19,7 @@
   "icon": "imgs/logo.png",
   "activationEvents": [
     "onStartupFinished",
-    "workspaceContains:.claude/mpi-kanban/kanban.md"
+    "workspaceContains:.agents/mpi-kanban/kanban.md"
   ],
   "main": "./dist/extension.js",
   "repository": {
@@ -98,3 +98,4 @@
     "planning"
   ]
 }
+

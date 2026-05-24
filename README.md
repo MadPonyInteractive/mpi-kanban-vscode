@@ -1,4 +1,4 @@
-# Mpi-Kanban
+﻿# Mpi-Kanban
 
 VS Code Kanban board for the MadPonyInteractive agent workflow.
 
@@ -12,7 +12,7 @@ Markdown file current. This extension owns the editor experience for that board.
 
 ## Features
 
-- **MPI board contract**: opens `.claude/mpi-kanban/kanban.md` in the current
+- **MPI board contract**: opens `.agents/mpi-kanban/kanban.md` in the current
   workspace.
 - **Kanban view**: displays MPI workflow tasks in fixed workflow columns.
 - **Live reload**: watches the board file and reloads when the agent workflow
@@ -38,13 +38,13 @@ MadPonyInteractive.mpi-kanban
 
 ### Open The Board
 
-1. Open a workspace that contains `.claude/mpi-kanban/kanban.md`.
+1. Open a workspace that contains `.agents/mpi-kanban/kanban.md`.
 2. Run **Mpi-Kanban: Open Mpi-Kanban Board** from the Command Palette.
 3. Leave the board open while the agent workflow edits the Markdown file.
 
 The board file is normally created by the Mpi-Kanban agent plugin when you start
 or continue MPI workflow work. If you are testing the extension without the
-plugin, create `.claude/mpi-kanban/kanban.md` manually.
+plugin, create `.agents/mpi-kanban/kanban.md` manually.
 
 ## Board Contract
 
@@ -140,3 +140,4 @@ preserved in [LICENSE](./LICENSE), and fork-specific attribution is recorded in
 ## License
 
 MIT.
+

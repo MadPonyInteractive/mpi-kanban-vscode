@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import { KanbanWebviewPanel } from './kanbanWebviewPanel';
 
-const KANBAN_RELATIVE_PATH = '.claude/mpi-kanban/kanban.md';
+const KANBAN_RELATIVE_PATH = '.agents/mpi-kanban/kanban.md';
 const OPEN_COMMAND = 'mpi-kanban.openKanban';
 const CONTEXT_KEY = 'mpiKanbanActive';
 
@@ -170,3 +170,4 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
 	void vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
 }
+
