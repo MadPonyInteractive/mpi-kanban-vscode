@@ -49,12 +49,24 @@ plugin, create `.agents/mpi-kanban/kanban.md` manually.
 ## Board Contract
 
 The extension is intentionally focused on the MPI workflow board. The board must
-use these columns:
+use the MPI workflow columns. Current four-column boards continue to render
+during the validation-gate migration:
 
 ```markdown
 ## BACKLOG
 ## PLANNING
 ## IMPLEMENTING
+## COMPLETED
+```
+
+The extension also supports the upcoming validation-gate column between
+implementation and completion:
+
+```markdown
+## BACKLOG
+## PLANNING
+## IMPLEMENTING
+## VALIDATING
 ## COMPLETED
 ```
 
@@ -94,6 +106,8 @@ extension are updated together.
 ## PLANNING
 
 ## IMPLEMENTING
+
+## VALIDATING
 
 ## COMPLETED
 ```

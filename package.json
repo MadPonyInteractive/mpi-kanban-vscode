@@ -3,7 +3,7 @@
   "displayName": "Mpi-Kanban",
   "description": "VS Code Kanban board for the MPI agent workflow.",
   "publisher": "MadPonyInteractive",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "author": {
     "name": "Madpony Interactive",
     "url": "https://github.com/MadPonyInteractive"
@@ -34,7 +34,11 @@
       {
         "command": "mpi-kanban.openKanban",
         "title": "Open Mpi-Kanban Board",
-        "category": "Mpi-Kanban"
+        "category": "Mpi-Kanban",
+        "icon": {
+          "light": "imgs/logo.png",
+          "dark": "imgs/logo.png"
+        }
       }
     ],
     "menus": {

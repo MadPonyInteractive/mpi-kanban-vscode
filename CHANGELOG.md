@@ -1,3 +1,12 @@
+## [0.1.7] (2026-05-27)
+
+### Features
+
+* Add backward-compatible support and documentation for the upcoming `VALIDATING`
+  workflow column.
+* Show the MPI logo for the editor-title shortcut that opens the board.
+* Add parser regression coverage for five-column board round-tripping.
+
 ## [0.1.6] (2026-05-24)
 
 ### Fixes
