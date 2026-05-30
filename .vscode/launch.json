@@ -23,7 +23,7 @@
 			"request": "launch",
 			"args": [
 				"${workspaceFolder}/test/fixtures/sample-board",
-				"${workspaceFolder}/test/fixtures/sample-board/.agents/mpi-kanban/kanban.md",
+				"${workspaceFolder}/test/fixtures/sample-board/.agents/mpi-kanban/board.json",
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [

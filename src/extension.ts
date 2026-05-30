@@ -1,55 +1,62 @@
 ﻿import * as vscode from 'vscode';
 import { KanbanWebviewPanel } from './kanbanWebviewPanel';
+import { TaskBoardStore } from './taskBoardStore';
 
-const KANBAN_RELATIVE_PATH = '.agents/mpi-kanban/kanban.md';
 const OPEN_COMMAND = 'mpi-kanban.openKanban';
+const OPEN_TASK_COMMAND = 'mpi-kanban.openTaskById';
+const INSTALL_SKILLS_COMMAND = 'mpi-kanban.installSkills';
 const CONTEXT_KEY = 'mpiKanbanActive';
+const MIGRATE_ACTION = 'Migrate to JSON Board';
 
-function getCandidateKanbanUris(): vscode.Uri[] {
-	const folders = vscode.workspace.workspaceFolders;
-	if (!folders || folders.length === 0) {
-		return [];
+async function resolveStore(uri?: vscode.Uri): Promise<TaskBoardStore | undefined> {
+	const folder = TaskBoardStore.findWorkspaceFolder(uri);
+	if (!folder) {
+		vscode.window.showErrorMessage('Open a workspace before opening Mpi-Kanban.');
+		return undefined;
 	}
 
-	return folders.map(folder => vscode.Uri.joinPath(folder.uri, ...KANBAN_RELATIVE_PATH.split('/')));
-}
+	const store = new TaskBoardStore(folder);
+	if (!await store.exists()) {
+		const legacyBoard = await store.findLegacyBoard();
+		if (legacyBoard) {
+			const choice = await vscode.window.showWarningMessage(
+				`Mpi-Kanban found legacy ${legacyBoard.relativePath}. Migration will create .agents/mpi-kanban/board.json, events.jsonl, tasks/MPI-*/ files, and a legacy snapshot without modifying or deleting the source board.`,
+				{ modal: true },
+				MIGRATE_ACTION
+			);
 
-async function findWorkspaceKanbanUri(requireExists = false): Promise<vscode.Uri | undefined> {
-	const candidates = getCandidateKanbanUris();
+			if (choice === MIGRATE_ACTION) {
+				try {
+					await store.migrateLegacyBoard(legacyBoard);
+					await vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
+					vscode.window.showInformationMessage('Migrated legacy Mpi-Kanban board to .agents/mpi-kanban/board.json.');
+					return store;
+				} catch (error) {
+					vscode.window.showErrorMessage(`Mpi-Kanban migration failed: ${error}`);
+				}
+			}
 
-	for (const uri of candidates) {
-		try {
-			await vscode.workspace.fs.stat(uri);
-			return uri;
-		} catch {
-			// Try the next workspace folder.
+			await vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
+			return undefined;
 		}
+
+		vscode.window.showErrorMessage('Mpi-Kanban could not find .agents/mpi-kanban/board.json in this workspace.');
+		await vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
+		return undefined;
 	}
 
-	return requireExists ? undefined : candidates[0];
-}
-
-function isWorkspaceKanbanUri(uri: vscode.Uri): boolean {
-	return getCandidateKanbanUris().some(candidate => uri.toString() === candidate.toString());
+	await vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
+	return store;
 }
 
 async function openWorkspaceKanban(context: vscode.ExtensionContext, uri?: vscode.Uri) {
-	const targetUri = uri ?? await findWorkspaceKanbanUri();
-
-	if (!targetUri) {
-		vscode.window.showErrorMessage('Open a workspace before opening Mpi-Kanban.');
-		return;
-	}
-
-	if (!targetUri.fsPath.endsWith(KANBAN_RELATIVE_PATH.replace(/\//g, '\\')) && !targetUri.fsPath.endsWith(KANBAN_RELATIVE_PATH)) {
-		vscode.window.showErrorMessage(`Mpi-Kanban only opens ${KANBAN_RELATIVE_PATH}.`);
+	const store = await resolveStore(uri);
+	if (!store) {
 		return;
 	}
 
 	try {
-		const document = await vscode.workspace.openTextDocument(targetUri);
-		KanbanWebviewPanel.createOrShow(context.extensionUri, context, document);
-		await vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
+		await KanbanWebviewPanel.createOrShow(context.extensionUri, context, store);
 	} catch (error) {
 		vscode.window.showErrorMessage(`Failed to open Mpi-Kanban board: ${error}`);
 	}
@@ -64,16 +71,13 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewPanelSerializer(KanbanWebviewPanel.viewType, {
 			async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
 				const panel = KanbanWebviewPanel.revive(webviewPanel, context.extensionUri, context);
-				const kanbanUri = await findWorkspaceKanbanUri(true);
+				const store = await resolveStore();
 
-				if (!kanbanUri) {
-					await vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
+				if (!store) {
 					return;
 				}
 
-				const document = await vscode.workspace.openTextDocument(kanbanUri);
-				panel.loadMarkdownFile(document);
-				await vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
+				await panel.loadTaskBoard(store);
 			}
 		});
 	}
@@ -82,46 +86,60 @@ export function activate(context: vscode.ExtensionContext) {
 		await openWorkspaceKanban(context, uri);
 	});
 
-	const kanbanWatcher = vscode.workspace.createFileSystemWatcher(`**/${KANBAN_RELATIVE_PATH}`);
-
-	const reloadKanban = async (uri: vscode.Uri) => {
-		if (!isWorkspaceKanbanUri(uri)) {
+	const openTaskCommand = vscode.commands.registerCommand(OPEN_TASK_COMMAND, async () => {
+		const store = await resolveStore();
+		if (!store) {
 			return;
 		}
 
-		await vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
+		const taskId = await vscode.window.showInputBox({
+			prompt: 'Open MPI task by ID',
+			placeHolder: 'MPI-42',
+			validateInput: value => /^MPI-\d+$/.test(value.trim()) ? undefined : 'Enter an ID like MPI-42.',
+		});
 
-		if (!KanbanWebviewPanel.currentPanel) {
+		if (!taskId) {
 			return;
 		}
 
+		await store.openTaskLink(taskId.trim(), 'plan');
+	});
+
+	const installSkillsCommand = vscode.commands.registerCommand(INSTALL_SKILLS_COMMAND, async () => {
+		const terminal = vscode.window.createTerminal('Mpi-Kanban Skills');
+		terminal.sendText('npx skills add MadPonyInteractive/mpi-kanban --all -y -g');
+		terminal.show();
+	});
+
+	const boardWatcher = vscode.workspace.createFileSystemWatcher('**/.agents/mpi-kanban/board.json');
+	const taskWatcher = vscode.workspace.createFileSystemWatcher('**/.agents/mpi-kanban/tasks/*/task.json');
+
+	const reloadBoard = async () => {
 		try {
-			const stat = await vscode.workspace.fs.stat(uri);
-			lastSeenMtime = stat.mtime;
-		} catch {
-			// The file may have been deleted between the watcher event and reload.
+			const store = await resolveStore();
+			if (store && KanbanWebviewPanel.currentPanel) {
+				await KanbanWebviewPanel.currentPanel.loadTaskBoard(store);
+				const stat = await vscode.workspace.fs.stat(store.boardUri);
+				lastSeenMtime = stat.mtime;
+			}
+		} catch (error) {
+			console.error('Failed to reload Mpi-Kanban board:', error);
 		}
-
-		const [document, content] = await Promise.all([
-			vscode.workspace.openTextDocument(uri),
-			vscode.workspace.fs.readFile(uri)
-		]);
-		KanbanWebviewPanel.currentPanel.loadMarkdownContent(Buffer.from(content).toString('utf8'), document);
 	};
 
-	const scheduleReloadKanban = (uri: vscode.Uri) => {
+	const scheduleReloadBoard = () => {
 		if (reloadTimer) {
 			clearTimeout(reloadTimer);
 		}
 
 		reloadTimer = setTimeout(() => {
-			void reloadKanban(uri);
+			void reloadBoard();
 		}, 100);
 	};
 
 	const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-		if (isWorkspaceKanbanUri(document.uri)) {
-			void reloadKanban(document.uri);
+		if (document.uri.fsPath.endsWith('task.json') || document.uri.fsPath.endsWith('board.json')) {
+			void reloadBoard();
 		}
 	});
 
@@ -132,18 +150,18 @@ export function activate(context: vscode.ExtensionContext) {
 
 		void (async () => {
 			try {
-				const uri = await findWorkspaceKanbanUri(true);
-				if (!uri) {
+				const store = await resolveStore();
+				if (!store) {
 					return;
 				}
 
-				const stat = await vscode.workspace.fs.stat(uri);
+				const stat = await vscode.workspace.fs.stat(store.boardUri);
 				if (lastSeenMtime !== 0 && stat.mtime === lastSeenMtime) {
 					return;
 				}
 
 				lastSeenMtime = stat.mtime;
-				scheduleReloadKanban(uri);
+				scheduleReloadBoard();
 			} catch {
 				// Ignore transient file access errors during external writes.
 			}
@@ -152,19 +170,23 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		openKanbanCommand,
-		kanbanWatcher,
-		kanbanWatcher.onDidCreate(scheduleReloadKanban),
-		kanbanWatcher.onDidChange(scheduleReloadKanban),
-		kanbanWatcher.onDidDelete(async () => {
+		openTaskCommand,
+		installSkillsCommand,
+		boardWatcher,
+		taskWatcher,
+		boardWatcher.onDidCreate(scheduleReloadBoard),
+		boardWatcher.onDidChange(scheduleReloadBoard),
+		boardWatcher.onDidDelete(async () => {
 			await vscode.commands.executeCommand('setContext', CONTEXT_KEY, false);
 		}),
+		taskWatcher.onDidCreate(scheduleReloadBoard),
+		taskWatcher.onDidChange(scheduleReloadBoard),
+		taskWatcher.onDidDelete(scheduleReloadBoard),
 		saveListener,
 		new vscode.Disposable(() => clearInterval(pollForExternalChanges)),
 	);
 
-	if (getCandidateKanbanUris().length > 0) {
-		void vscode.commands.executeCommand('setContext', CONTEXT_KEY, true);
-	}
+	void resolveStore();
 }
 
 export function deactivate() {

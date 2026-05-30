@@ -1,8 +1,8 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { MarkdownKanbanParser, KanbanBoard, KanbanTask, KanbanColumn } from './markdownParser';
+import { TaskBoardStore, TaskColumnId } from './taskBoardStore';
 
 export class KanbanWebviewPanel {
     public static currentPanel: KanbanWebviewPanel | undefined;
@@ -12,17 +12,15 @@ export class KanbanWebviewPanel {
     private readonly _extensionUri: vscode.Uri;
     private _context: vscode.ExtensionContext;
     private _disposables: vscode.Disposable[] = [];
-    private _board?: KanbanBoard;
-    private _document?: vscode.TextDocument;
+    private _board?: any;
+    private _store?: TaskBoardStore;
 
-    public static createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, document?: vscode.TextDocument) {
+    public static async createOrShow(extensionUri: vscode.Uri, context: vscode.ExtensionContext, store: TaskBoardStore) {
         const column = vscode.window.activeTextEditor?.viewColumn;
 
         if (KanbanWebviewPanel.currentPanel) {
             KanbanWebviewPanel.currentPanel._panel.reveal(column);
-            if (document) {
-                KanbanWebviewPanel.currentPanel.loadMarkdownFile(document);
-            }
+            await KanbanWebviewPanel.currentPanel.loadTaskBoard(store);
             return;
         }
 
@@ -39,9 +37,7 @@ export class KanbanWebviewPanel {
 
         KanbanWebviewPanel.currentPanel = new KanbanWebviewPanel(panel, extensionUri, context);
 
-        if (document) {
-            KanbanWebviewPanel.currentPanel.loadMarkdownFile(document);
-        }
+        await KanbanWebviewPanel.currentPanel.loadTaskBoard(store);
     }
 
     public static revive(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
@@ -60,10 +56,6 @@ export class KanbanWebviewPanel {
 
         this._renderWebview();
         this._setupEventListeners();
-        
-        if (this._document) {
-            this.loadMarkdownFile(this._document);
-        }
     }
 
     private _setupEventListeners() {
@@ -100,20 +92,14 @@ export class KanbanWebviewPanel {
             case 'editTask':
                 await this.editTask(message.taskId, message.columnId, message.taskData);
                 break;
-            case 'addColumn':
-                await this.addColumn(message.title);
+            case 'openTaskLink':
+                await this.openTaskLink(message.taskId, message.linkKey);
                 break;
-            case 'moveColumn':
-                await this.moveColumn(message.fromIndex, message.toIndex);
+            case 'openTaskFolder':
+                await this.openTaskFolder(message.taskId);
                 break;
             case 'toggleTask':
                 this.toggleTaskExpansion(message.taskId);
-                break;
-            case 'updateTaskStep':
-                await this.updateTaskStep(message.taskId, message.columnId, message.stepIndex, message.completed);
-                break;
-            case 'reorderTaskSteps':
-                await this.reorderTaskSteps(message.taskId, message.columnId, message.newOrder);
                 break;
             case 'ready':
                 this.postBoard();
@@ -121,23 +107,17 @@ export class KanbanWebviewPanel {
         }
     }
 
-    public loadMarkdownFile(document: vscode.TextDocument) {
-        this._document = document;
-        this.loadMarkdownContent(document.getText());
-    }
-
-    public loadMarkdownContent(content: string, document?: vscode.TextDocument) {
-        if (document) {
-            this._document = document;
-        }
+    public async loadTaskBoard(store: TaskBoardStore) {
+        this._store = store;
 
         try {
-            this._board = MarkdownKanbanParser.parseMarkdown(content);
+            this._board = await store.loadWebviewBoard();
         } catch (error) {
-            console.error('Error parsing Markdown:', error);
-            vscode.window.showErrorMessage(`Kanban parsing error: ${error instanceof Error ? error.message : String(error)}`);
-            this._board = { title: 'Error Loading Board', columns: [] };
+            console.error('Error loading JSON task board:', error);
+            vscode.window.showErrorMessage(`Mpi-Kanban board loading error: ${error instanceof Error ? error.message : String(error)}`);
+            this._board = { title: 'Error Loading Board', workspaceName: store.workspaceFolder.name, columns: [] };
         }
+
         this.postBoard();
     }
 
@@ -154,163 +134,58 @@ export class KanbanWebviewPanel {
         });
     }
 
-    private async saveToMarkdown() {
-        if (!this._document || !this._board) return;
+    private async moveTask(taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) {
+        if (!this._store) return;
 
-        // 获取配置设置
-        const config = vscode.workspace.getConfiguration('mpi-kanban');
-        const taskHeaderFormat = config.get<'title' | 'list'>('taskHeader', 'title');
-
-        const markdown = MarkdownKanbanParser.generateMarkdown(this._board, taskHeaderFormat);
-        const edit = new vscode.WorkspaceEdit();
-        edit.replace(
-            this._document.uri,
-            new vscode.Range(0, 0, this._document.lineCount, 0),
-            markdown
-        );
-        await vscode.workspace.applyEdit(edit);
-        await this._document.save();
-    }
-
-    private findColumn(columnId: string): KanbanColumn | undefined {
-        return this._board?.columns.find(col => col.id === columnId);
-    }
-
-    private findTask(columnId: string, taskId: string): { column: KanbanColumn; task: KanbanTask; index: number } | undefined {
-        const column = this.findColumn(columnId);
-        if (!column) return undefined;
-
-        const taskIndex = column.tasks.findIndex(task => task.id === taskId);
-        if (taskIndex === -1) return undefined;
-
-        return {
-            column,
-            task: column.tasks[taskIndex],
-            index: taskIndex
-        };
-    }
-
-    private async performAction(action: () => void) {
-        if (!this._board) return;
-        
-        action();
-        await this.saveToMarkdown();
+        this._board = await this._store.moveTask(taskId, fromColumnId as TaskColumnId, toColumnId as TaskColumnId, newIndex);
         this.postBoard();
     }
 
-    private async moveTask(taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) {
-        await this.performAction(() => {
-            const fromColumn = this.findColumn(fromColumnId);
-            const toColumn = this.findColumn(toColumnId);
-
-            if (!fromColumn || !toColumn) return;
-
-            const taskIndex = fromColumn.tasks.findIndex(task => task.id === taskId);
-            if (taskIndex === -1) return;
-
-            const task = fromColumn.tasks.splice(taskIndex, 1)[0];
-            toColumn.tasks.splice(newIndex, 0, task);
-        });
-    }
-
     private async addTask(columnId: string, taskData: any) {
-        await this.performAction(() => {
-            const column = this.findColumn(columnId);
-            if (!column) return;
+        if (!this._store) return;
 
-            const newTask: KanbanTask = {
-                id: Math.random().toString(36).substr(2, 9),
-                title: taskData.title,
-                description: taskData.description,
-                tags: taskData.tags || [],
-                priority: taskData.priority,
-                workload: taskData.workload,
-                dueDate: taskData.dueDate,
-                defaultExpanded: taskData.defaultExpanded,
-                steps: taskData.steps || []
-            };
-
-            column.tasks.push(newTask);
+        this._board = await this._store.createTask({
+            title: taskData.title,
+            description: taskData.description,
         });
+        this.postBoard();
     }
 
     private async deleteTask(taskId: string, columnId: string) {
-        await this.performAction(() => {
-            const column = this.findColumn(columnId);
-            if (!column) return;
+        if (!this._store) return;
 
-            const taskIndex = column.tasks.findIndex(task => task.id === taskId);
-            if (taskIndex === -1) return;
-
-            column.tasks.splice(taskIndex, 1);
-        });
+        this._board = await this._store.deleteTask(taskId);
+        this.postBoard();
     }
 
     private async editTask(taskId: string, columnId: string, taskData: any) {
-        await this.performAction(() => {
-            const result = this.findTask(columnId, taskId);
-            if (!result) return;
+        if (!this._store) return;
 
-            Object.assign(result.task, {
-                title: taskData.title,
-                description: taskData.description,
-                tags: taskData.tags || [],
-                priority: taskData.priority,
-                workload: taskData.workload,
-                dueDate: taskData.dueDate,
-                defaultExpanded: taskData.defaultExpanded,
-                steps: taskData.steps || []
-            });
+        this._board = await this._store.updateTask(taskId, {
+            title: taskData.title,
+            description: taskData.description,
         });
+        this.postBoard();
     }
 
-    private async updateTaskStep(taskId: string, columnId: string, stepIndex: number, completed: boolean) {
-        await this.performAction(() => {
-            const result = this.findTask(columnId, taskId);
-            if (!result?.task.steps || stepIndex < 0 || stepIndex >= result.task.steps.length) {
-                return;
-            }
+    private async openTaskLink(taskId: string, linkKey: string) {
+        if (!this._store) {
+            return;
+        }
 
-            result.task.steps[stepIndex].completed = completed;
-        });
+        try {
+            await this._store.openTaskLink(taskId, linkKey as any);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to open ${taskId} link: ${error}`);
+        }
     }
 
-    private async reorderTaskSteps(taskId: string, columnId: string, newOrder: number[]) {
-        await this.performAction(() => {
-            const result = this.findTask(columnId, taskId);
-            if (!result?.task.steps) return;
+    private async openTaskFolder(taskId: string) {
+        if (!this._store) {
+            return;
+        }
 
-            const originalSteps = [...result.task.steps];
-            const reorderedSteps = newOrder
-                .filter(index => index >= 0 && index < originalSteps.length)
-                .map(index => originalSteps[index]);
-
-            result.task.steps = reorderedSteps;
-        });
-    }
-
-    private async addColumn(title: string) {
-        await this.performAction(() => {
-            if (!this._board) return;
-
-            const newColumn: KanbanColumn = {
-                id: Math.random().toString(36).substr(2, 9),
-                title: title,
-                tasks: []
-            };
-
-            this._board.columns.push(newColumn);
-        });
-    }
-
-    private async moveColumn(fromIndex: number, toIndex: number) {
-        await this.performAction(() => {
-            if (!this._board || fromIndex === toIndex) return;
-
-            const columns = this._board.columns;
-            const column = columns.splice(fromIndex, 1)[0];
-            columns.splice(toIndex, 0, column);
-        });
+        await this._store.openTaskFolder(taskId);
     }
 
     private toggleTaskExpansion(taskId: string) {

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-5",
+  "title": "Another test",
+  "description": "If you have an idea for a test that may change how things are in this app, consult please.",
+  "column": "doing",
+  "maturity": "planned",
+  "status": "deleted",
+  "created_at": "2026-05-30T17:54:09.917Z",
+  "updated_at": "2026-05-30T17:54:22.629Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

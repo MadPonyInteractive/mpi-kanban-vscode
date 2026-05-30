@@ -19,7 +19,9 @@
   "icon": "imgs/logo.png",
   "activationEvents": [
     "onStartupFinished",
-    "workspaceContains:.agents/mpi-kanban/kanban.md"
+    "workspaceContains:.agents/mpi-kanban/board.json",
+    "workspaceContains:.agents/mpi-kanban/kanban.md",
+    "workspaceContains:.claude/mpi-kanban/kanban.md"
   ],
   "main": "./dist/extension.js",
   "repository": {
@@ -39,31 +41,26 @@
           "light": "imgs/logo.png",
           "dark": "imgs/logo.png"
         }
+      },
+      {
+        "command": "mpi-kanban.openTaskById",
+        "title": "Open Task by ID",
+        "category": "Mpi-Kanban"
+      },
+      {
+        "command": "mpi-kanban.installSkills",
+        "title": "Install or Update Agent Skills",
+        "category": "Mpi-Kanban"
       }
     ],
     "menus": {
-      "editor/title": [
+      "explorer/context": [
         {
           "command": "mpi-kanban.openKanban",
-          "when": "resourceFilename == kanban.md && mpiKanbanActive",
+          "when": "mpiKanbanActive",
           "group": "navigation"
         }
       ]
-    },
-    "configuration": {
-      "type": "object",
-      "title": "Mpi-Kanban",
-      "properties": {
-        "mpi-kanban.taskHeader": {
-          "type": "string",
-          "enum": [
-            "title",
-            "list"
-          ],
-          "default": "title",
-          "description": "Choose how tasks are formatted in the kanban file. 'title' uses ### headers, 'list' uses - bullet points."
-        }
-      }
     }
   },
   "scripts": {

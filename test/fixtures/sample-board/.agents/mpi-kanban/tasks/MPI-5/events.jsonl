@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-5","at":"2026-05-30T17:54:09.917Z","actor":"vscode","summary":"Created MPI-5."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-5","at":"2026-05-30T17:54:13.688Z","actor":"vscode","from":"todo","to":"doing","summary":"Moved MPI-5 from To do to Doing."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-5","at":"2026-05-30T17:54:22.629Z","actor":"vscode","summary":"Deleted MPI-5."}

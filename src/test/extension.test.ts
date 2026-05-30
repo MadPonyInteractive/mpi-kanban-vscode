@@ -1,10 +1,14 @@
 import * as assert from 'assert';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 // import * as myExtension from '../../extension';
 import { MarkdownKanbanParser } from '../markdownParser';
+import { extractPlanFilePath, mapLegacyColumn, TaskBoardStore } from '../taskBoardStore';
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -51,5 +55,88 @@ suite('Extension Test Suite', () => {
 		const board = MarkdownKanbanParser.parseMarkdown('# Mpi-Kanban\n\n## BACKLOG\n\n## PLANNING\n\n## IMPLEMENTING\n\n## COMPLETED\n');
 
 		assert.deepStrictEqual(board.columns.map(column => column.title), ['BACKLOG', 'PLANNING', 'IMPLEMENTING', 'COMPLETED']);
+	});
+
+	test('Maps legacy MPI columns into JSON board columns', () => {
+		assert.deepStrictEqual(mapLegacyColumn('BACKLOG'), { column: 'todo', maturity: 'idea', status: 'active' });
+		assert.deepStrictEqual(mapLegacyColumn('PLANNING'), { column: 'todo', maturity: 'planned', status: 'active' });
+		assert.deepStrictEqual(mapLegacyColumn('IMPLEMENTING'), { column: 'doing', maturity: 'in-progress', status: 'active' });
+		assert.deepStrictEqual(mapLegacyColumn('VALIDATING'), { column: 'doing', maturity: 'validating', status: 'active' });
+		assert.deepStrictEqual(mapLegacyColumn('COMPLETED'), { column: 'done', maturity: 'complete', status: 'accepted' });
+	});
+
+	test('Extracts legacy plan file links from card descriptions', () => {
+		assert.strictEqual(
+			extractPlanFilePath('Some detail\nPlan file: docs/plans/example.md\nMore detail'),
+			'docs/plans/example.md'
+		);
+		assert.strictEqual(extractPlanFilePath('No plan here'), undefined);
+	});
+
+	test('Migrates a legacy Markdown board into JSON task files', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-kanban-'));
+		const legacyDir = path.join(tempDir, '.agents', 'mpi-kanban');
+		const legacyMarkdown = `# Mpi-Kanban
+
+## BACKLOG
+
+### Backlog idea
+  - tags: [Idea]
+    \`\`\`md
+    Capture this later.
+    \`\`\`
+
+## PLANNING
+
+## IMPLEMENTING
+
+### Active work
+  - priority: high
+  - steps:
+      - [x] First step
+      - [ ] Second step
+    \`\`\`md
+    Plan file: docs/plans/active-work.md
+    \`\`\`
+
+## VALIDATING
+
+## COMPLETED
+`;
+
+		try {
+			await fs.mkdir(legacyDir, { recursive: true });
+			await fs.writeFile(path.join(legacyDir, 'kanban.md'), legacyMarkdown, 'utf8');
+
+			const folder: vscode.WorkspaceFolder = {
+				uri: vscode.Uri.file(tempDir),
+				name: 'legacy-board',
+				index: 0,
+			};
+			const store = new TaskBoardStore(folder);
+			const board = await store.migrateLegacyBoard();
+
+			assert.deepStrictEqual(board.columns.map(column => column.tasks.map(task => task.id)), [['MPI-1'], ['MPI-2'], []]);
+
+			const boardJson = JSON.parse(await fs.readFile(path.join(legacyDir, 'board.json'), 'utf8')) as { next_id: number; columns: Record<string, string[]> };
+			assert.strictEqual(boardJson.next_id, 3);
+			assert.deepStrictEqual(boardJson.columns.todo, ['MPI-1']);
+			assert.deepStrictEqual(boardJson.columns.doing, ['MPI-2']);
+
+			const legacyAfterMigration = await fs.readFile(path.join(legacyDir, 'kanban.md'), 'utf8');
+			assert.strictEqual(legacyAfterMigration, legacyMarkdown);
+
+			const snapshots = await fs.readdir(path.join(legacyDir, 'legacy'));
+			assert.strictEqual(snapshots.length, 1);
+
+			const plan = await fs.readFile(path.join(legacyDir, 'tasks', 'MPI-2', 'plan.md'), 'utf8');
+			assert.match(plan, /Legacy plan file: docs\/plans\/active-work\.md/);
+
+			const checklist = await fs.readFile(path.join(legacyDir, 'tasks', 'MPI-2', 'checklist.md'), 'utf8');
+			assert.match(checklist, /- \[x\] First step/);
+			assert.match(checklist, /- \[ \] Second step/);
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
 	});
 });

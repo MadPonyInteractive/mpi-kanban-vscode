@@ -7,8 +7,8 @@ body {
     color: var(--vscode-foreground);
     background-color: var(--vscode-editor-background);
     margin: 0;
-    padding: 20px;
-    overflow-x: auto;
+    padding: 16px;
+    overflow: hidden;
 }
 
 .kanban-header {
@@ -736,6 +736,9 @@ body.filters-visible {
 
 .kanban-column.drag-over {
     background-color: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: -2px;
 }
 
 /* Task drag insertion preview */
@@ -982,4 +985,277 @@ body.filters-visible {
 .task-step-item.drag-insert-after {
     border-bottom: 2px solid var(--vscode-focusBorder);
     margin-bottom: 2px;
+}
+
+.task-board-shell {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 32px);
+    max-width: 100%;
+    min-width: 0;
+}
+
+.task-board-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.task-board-toolbar h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 650;
+}
+
+.task-board-toolbar p {
+    margin: 4px 0 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+.task-board-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    gap: 16px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.task-board-layout .kanban-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 12px;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 8px;
+}
+
+.task-board-layout .kanban-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.task-board-layout .column-header {
+    cursor: default;
+}
+
+.task-board-layout .column-title {
+    margin: 0;
+    font-size: 14px;
+}
+
+.task-board-layout .tasks-container {
+    flex: 1;
+    max-height: none;
+    min-height: 160px;
+    overflow-y: auto;
+    padding: 2px 2px 24px;
+}
+
+.task-board-layout .task-item {
+    cursor: grab;
+    padding: 10px;
+}
+
+.task-board-layout .task-item:active {
+    cursor: grabbing;
+}
+
+.task-board-layout .task-item.selected {
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.task-card-topline,
+.task-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.task-id {
+    color: var(--vscode-descriptionForeground);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.attention-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--vscode-testing-iconFailed);
+}
+
+.task-board-layout .task-title {
+    margin: 6px 0;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.task-board-layout .task-description {
+    margin: 0 0 8px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.task-badges span {
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 10px;
+    padding: 2px 5px;
+}
+
+.checklist-preview {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--vscode-panel-border);
+    color: var(--vscode-descriptionForeground);
+    font-size: 11px;
+}
+
+.checklist-preview li {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.checklist-preview li.completed {
+    text-decoration: line-through;
+}
+
+.task-board-layout .task-actions {
+    top: 6px;
+    right: 6px;
+}
+
+.task-board-layout .task-item.dragging {
+    opacity: 0.45;
+    transform: scale(0.99);
+}
+
+.primary-button,
+.secondary-button,
+.link-button {
+    border: 1px solid var(--vscode-button-border, transparent);
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.primary-button {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    padding: 8px 12px;
+}
+
+.secondary-button {
+    width: 100%;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    padding: 8px 10px;
+}
+
+.task-detail-panel {
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    background: var(--vscode-sideBar-background);
+    padding: 14px;
+    min-height: 260px;
+    max-height: calc(100vh - 122px);
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.detail-heading h2 {
+    margin: 6px 0 0;
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+.detail-description,
+.empty-detail,
+.active-session {
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.attention-callout {
+    margin: 12px 0;
+    padding: 8px;
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-panel-border));
+    border-radius: 4px;
+    background: var(--vscode-inputValidation-warningBackground);
+    color: var(--vscode-inputValidation-warningForeground);
+    font-size: 12px;
+}
+
+.detail-links {
+    display: grid;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.link-button {
+    display: grid;
+    gap: 3px;
+    width: 100%;
+    text-align: left;
+    background: var(--vscode-editor-background);
+    color: var(--vscode-foreground);
+    padding: 8px;
+}
+
+.link-button span {
+    color: var(--vscode-descriptionForeground);
+    font-size: 11px;
+}
+
+.task-form {
+    display: grid;
+    gap: 8px;
+}
+
+@media (max-width: 1180px) {
+    body {
+        overflow: auto;
+    }
+
+    .task-board-shell {
+        height: auto;
+        min-height: calc(100vh - 32px);
+    }
+
+    .task-board-layout {
+        grid-template-columns: 1fr;
+        overflow: visible;
+    }
+
+    .task-board-layout .kanban-board {
+        grid-template-columns: repeat(3, minmax(220px, 1fr));
+        min-height: 360px;
+        overflow-x: auto;
+    }
+
+    .task-detail-panel {
+        order: 2;
+        max-height: none;
+    }
 }

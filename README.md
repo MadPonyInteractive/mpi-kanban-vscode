@@ -2,27 +2,23 @@
 
 VS Code Kanban board for the MadPonyInteractive agent workflow.
 
-Mpi-Kanban renders the workflow board used by the
-[Mpi-Kanban agent plugin](https://github.com/MadPonyInteractive/mpi-kanban) as
-an interactive board inside VS Code. The agent plugin owns the workflow state:
-it creates plans, moves work through the board, writes handoffs, and keeps the
-Markdown file current. This extension owns the editor experience for that board.
+Mpi-Kanban renders the JSON task board used by the
+[Mpi-Kanban Agent Skills pack](https://github.com/MadPonyInteractive/mpi-kanban)
+as an interactive board inside VS Code. The skills own agent workflow state;
+this extension owns the editor experience for `.agents/mpi-kanban/board.json`
+and the linked `.agents/mpi-kanban/tasks/<id>/` workspaces.
 
 ![Mpi-Kanban board](./imgs/board.png)
 
 ## Features
 
-- **MPI board contract**: opens `.agents/mpi-kanban/kanban.md` in the current
+- **MPI board contract**: opens `.agents/mpi-kanban/board.json` in the current
   workspace.
-- **Kanban view**: displays MPI workflow tasks in fixed workflow columns.
-- **Live reload**: watches the board file and reloads when the agent workflow
-  updates Markdown on disk.
-- **Drag and drop**: moves tasks between columns and reorders tasks inside a
-  column.
-- **Task details**: supports descriptions, due dates, tags, priority, workload,
-  default-expanded cards, and checklist steps.
-- **Filtering and sorting**: filters visible tasks by tag/workload text and
-  visually sorts tasks by name, due date, priority, workload, or tags.
+- **Task board view**: displays fixed `To do`, `Doing`, and `Done` columns.
+- **Live reload**: watches `board.json` and task-card JSON files.
+- **Drag and drop**: moves whole cards between columns and appends task events.
+- **Task details**: shows visible `MPI-*` IDs, short descriptions, attention,
+  checklist previews for active work, and task workspace links.
 - **VS Code themed UI**: follows the active editor theme and can be kept open
   beside Claude Code, Codex, or another agent panel.
 
@@ -38,92 +34,59 @@ MadPonyInteractive.mpi-kanban
 
 ### Open The Board
 
-1. Open a workspace that contains `.agents/mpi-kanban/kanban.md`.
+1. Open a workspace that contains `.agents/mpi-kanban/board.json`.
 2. Run **Mpi-Kanban: Open Mpi-Kanban Board** from the Command Palette.
-3. Leave the board open while the agent workflow edits the Markdown file.
+3. Leave the board open while the agent workflow edits JSON task files.
 
-The board file is normally created by the Mpi-Kanban agent plugin when you start
-or continue MPI workflow work. If you are testing the extension without the
-plugin, create `.agents/mpi-kanban/kanban.md` manually.
+The board file is normally created by the Mpi-Kanban Agent Skills pack when you
+start or continue MPI workflow work. Use
+`npx skills add MadPonyInteractive/mpi-kanban --all -y -g` to install or update
+the complete pack.
+
+### Legacy Markdown Boards
+
+If a workspace has `.agents/mpi-kanban/kanban.md` or
+`.claude/mpi-kanban/kanban.md` but no JSON board, opening Mpi-Kanban shows a
+migration prompt. Approving it creates:
+
+- `.agents/mpi-kanban/board.json`
+- `.agents/mpi-kanban/events.jsonl`
+- `.agents/mpi-kanban/tasks/MPI-*/` task workspaces
+- `.agents/mpi-kanban/legacy/kanban-<timestamp>.md`
+
+The extension does not modify or delete the source `kanban.md` during this
+migration. After `board.json` exists, the JSON board is the live source.
 
 ## Board Contract
 
-The extension is intentionally focused on the MPI workflow board. The board must
-use the MPI workflow columns. Current four-column boards continue to render
-during the validation-gate migration:
-
-```markdown
-## BACKLOG
-## PLANNING
-## IMPLEMENTING
-## COMPLETED
-```
-
-The extension also supports the upcoming validation-gate column between
-implementation and completion:
-
-```markdown
-## BACKLOG
-## PLANNING
-## IMPLEMENTING
-## VALIDATING
-## COMPLETED
-```
-
-Supported task metadata fields:
-
-- `due`
-- `tags`
-- `priority`
-- `workload`
-- `defaultExpanded`
-- `steps`
-
-The workflow plugin may also add a plan reference inside task bodies:
+The extension is intentionally focused on the MPI JSON task board:
 
 ```text
-Plan file: docs/plans/YYYY-MM-DD-example.md
+.agents/mpi-kanban/board.json
+.agents/mpi-kanban/events.jsonl
+.agents/mpi-kanban/tasks/<id>/task.json
 ```
 
-Do not add custom columns or metadata fields unless the workflow plugin and this
-extension are updated together.
+The board has exactly three fixed columns: `todo`, `doing`, and `done`.
+User-facing labels are `To do`, `Doing`, and `Done`. Task IDs are visible
+system-assigned IDs such as `MPI-42`.
+
+Legacy `.agents/mpi-kanban/kanban.md` files are migration inputs or snapshots,
+not the live source once `board.json` exists.
 
 ## Example Board
 
-```markdown
-# Mpi-Kanban
-
-## BACKLOG
-
-### Publish VS Code extension
-- tags: [release, vscode]
-- priority: high
-- workload: Normal
-- steps:
-      - [x] Package VSIX
-      - [ ] Publish Marketplace update
-
-## PLANNING
-
-## IMPLEMENTING
-
-## VALIDATING
-
-## COMPLETED
+```json
+{
+  "schema": "mpi-kanban/board/v1",
+  "next_id": 4,
+  "columns": {
+    "todo": ["MPI-1"],
+    "doing": ["MPI-2"],
+    "done": ["MPI-3"]
+  }
+}
 ```
-
-## Filtering And Sorting
-
-The filter box matches task `tags` and `workload` values. Multiple filter terms
-can be entered with commas, such as:
-
-```text
-release,vscode
-```
-
-Sorting is visual only inside the webview. It changes how tasks are displayed in
-each column, but it does not rewrite the Markdown order until a task is edited
-or moved.
 
 ## Development
 
