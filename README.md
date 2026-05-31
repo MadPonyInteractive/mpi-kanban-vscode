@@ -1,12 +1,14 @@
 ﻿# Mpi-Kanban
 
-VS Code Kanban board for the MadPonyInteractive agent workflow.
+Mpi-Kanban is a VS Code extension that supports the
+[Mpi-Kanban Agent Skills pack](https://github.com/MadPonyInteractive/mpi-kanban).
+It is not a standalone Kanban plugin; it gives you a readable, editor-native
+view of the task board that the skills create and maintain.
 
-Mpi-Kanban renders the JSON task board used by the
-[Mpi-Kanban Agent Skills pack](https://github.com/MadPonyInteractive/mpi-kanban)
-as an interactive board inside VS Code. The skills own agent workflow state;
-this extension owns the editor experience for `.agents/mpi-kanban/board.json`
-and the linked `.agents/mpi-kanban/tasks/<id>/` workspaces.
+The skills own agent workflow state. This extension owns the VS Code experience
+for `.agents/mpi-kanban/board.json` and the linked
+`.agents/mpi-kanban/tasks/<id>/` workspaces, rendering that JSON contract as an
+interactive board beside Claude Code, Codex, or another agent panel.
 
 ![Mpi-Kanban board](./imgs/board.png)
 
