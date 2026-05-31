@@ -92,6 +92,9 @@ export class KanbanWebviewPanel {
             case 'editTask':
                 await this.editTask(message.taskId, message.columnId, message.taskData);
                 break;
+            case 'toggleChecklistItem':
+                await this.toggleChecklistItem(message.taskId, message.itemIndex, message.completed, message.expected);
+                break;
             case 'openTaskLink':
                 await this.openTaskLink(message.taskId, message.linkKey);
                 break;
@@ -134,6 +137,14 @@ export class KanbanWebviewPanel {
         });
     }
 
+    private postNotice(kind: 'warning', text: string) {
+        this._panel.webview.postMessage({
+            type: 'boardNotice',
+            kind,
+            text,
+        });
+    }
+
     private async moveTask(taskId: string, fromColumnId: string, toColumnId: string, newIndex: number) {
         if (!this._store) return;
 
@@ -166,6 +177,21 @@ export class KanbanWebviewPanel {
             description: taskData.description,
         });
         this.postBoard();
+    }
+
+    private async toggleChecklistItem(taskId: string, itemIndex: number, completed: boolean, expected?: { text?: string; completed?: boolean }) {
+        if (!this._store) return;
+
+        try {
+            this._board = await this._store.toggleChecklistItem(taskId, itemIndex, completed, expected);
+            this.postBoard();
+            this.postNotice('warning', 'Checklist updated. Agents treat user checks as progress notes, not validation.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            vscode.window.showWarningMessage(`Mpi-Kanban checklist update skipped: ${message}`);
+            this.postNotice('warning', message);
+            this.postBoard();
+        }
     }
 
     private async openTaskLink(taskId: string, linkKey: string) {

@@ -3,15 +3,15 @@
   "next_id": 7,
   "columns": {
     "todo": [
-      "MPI-1"
+      "MPI-1",
+      "MPI-4"
     ],
     "doing": [
-      "MPI-4",
       "MPI-2",
-      "MPI-3"
+      "MPI-6"
     ],
     "done": [
-      "MPI-6"
+      "MPI-3"
     ]
   }
 }

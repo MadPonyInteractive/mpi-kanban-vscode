@@ -314,25 +314,42 @@ function renderDetailPanel () {
   const panel = document.getElementById('task-detail-panel')
   const task = findTask(selectedTaskId)
   if (!task) {
+    panel.className = 'task-detail-panel'
     panel.innerHTML = '<p class="empty-detail">Select a task.</p>'
     return
   }
 
-  const links = Object.entries(task.links || {})
-    .filter(([, value]) => Boolean(value))
-    .map(([key, value]) => `<button class="link-button" data-link="${escapeHtml(key)}" type="button">${escapeHtml(key)}<span>${escapeHtml(value)}</span></button>`)
-    .join('')
+  panel.className = `task-detail-panel ${task.maturity ? `detail-maturity-${safeClassName(task.maturity)}` : ''}`.trim()
+
+  const primaryLinks = createDetailLinks(task, ['brief', 'plan', 'checklist', 'validation'])
+  const artifactLinks = createDetailLinks(task, ['events', 'files', 'handoffs', 'research'])
+  const stateBadges = [
+    task.maturity ? `<span class="detail-state-pill">${escapeHtml(task.maturity)}</span>` : '',
+    task.status ? `<span class="detail-state-pill muted">${escapeHtml(task.status)}</span>` : '',
+  ].join('')
 
   panel.innerHTML = `
     <div class="detail-heading">
-      <span class="task-id">${escapeHtml(task.id)}</span>
+      <div class="detail-kicker">
+        <span class="task-id">${escapeHtml(task.id)}</span>
+        <div class="detail-state-pills">${stateBadges}</div>
+      </div>
       <h2>${escapeHtml(task.title)}</h2>
     </div>
     ${task.description ? `<p class="detail-description">${escapeHtml(task.description)}</p>` : ''}
     ${task.attention?.state === 'required' ? `<div class="attention-callout">${escapeHtml(task.attention.reason || 'Attention required')}</div>` : ''}
     ${task.activeSessionTitle ? `<div class="active-session">${escapeHtml(task.activeSessionTitle)}</div>` : ''}
-    <div class="detail-links">${links}</div>
-    <button class="secondary-button" id="open-task-folder" type="button">Open Task Folder</button>
+    <section class="detail-section">
+      <h3>Task Workspace</h3>
+      <div class="detail-links primary-links">${primaryLinks || '<p class="empty-detail">No workspace links.</p>'}</div>
+    </section>
+    <details class="artifact-disclosure">
+      <summary>Artifacts</summary>
+      <div class="detail-links artifact-links">
+        ${artifactLinks}
+        <button class="link-button" id="open-task-folder" type="button">Task Folder<span>Reveal in file system</span></button>
+      </div>
+    </details>
   `
 
   panel.querySelectorAll('[data-link]').forEach(button => {
@@ -341,9 +358,48 @@ function renderDetailPanel () {
     })
   })
 
-  panel.querySelector('#open-task-folder').addEventListener('click', () => {
+  panel.querySelector('#open-task-folder')?.addEventListener('click', () => {
     vscode.postMessage({ type: 'openTaskFolder', taskId: task.id })
   })
+}
+
+function createDetailLinks (task, keys) {
+  return keys
+    .filter(key => Boolean(task.links?.[key]))
+    .map(key => {
+      const value = task.links[key]
+      return `<button class="link-button" data-link="${escapeHtml(key)}" type="button">${detailLinkLabel(key)}<span>${detailLinkHint(task, key, value)}</span></button>`
+    })
+    .join('')
+}
+
+function detailLinkLabel (key) {
+  const labels = {
+    brief: 'Brief',
+    plan: 'Plan',
+    checklist: 'Checklist',
+    validation: 'Validation',
+    events: 'Events',
+    files: 'Files',
+    handoffs: 'Handoffs',
+    research: 'Research',
+  }
+  return labels[key] || key
+}
+
+function detailLinkHint (task, key, value) {
+  if (key === 'checklist') {
+    const total = task.checklist?.length || 0
+    if (total === 0) return 'No checklist items'
+    const completed = task.checklist.filter(item => item.completed).length
+    return `${completed}/${total} done`
+  }
+
+  return escapeHtml(value)
+}
+
+function safeClassName (value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9-]+/g, '-')
 }
 
 function openTaskModal (task = null) {

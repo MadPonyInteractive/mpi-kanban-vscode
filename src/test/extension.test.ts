@@ -139,4 +139,62 @@ suite('Extension Test Suite', () => {
 			await fs.rm(tempDir, { recursive: true, force: true });
 		}
 	});
+
+	test('Toggles JSON checklist items without moving the task', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-kanban-'));
+		const boardDir = path.join(tempDir, '.agents', 'mpi-kanban');
+		const taskDir = path.join(boardDir, 'tasks', 'MPI-1');
+
+		try {
+			await fs.mkdir(taskDir, { recursive: true });
+			await fs.writeFile(path.join(boardDir, 'board.json'), JSON.stringify({
+				schema: 'mpi-kanban/board/v1',
+				next_id: 2,
+				columns: { todo: [], doing: ['MPI-1'], done: [] },
+			}, null, 2), 'utf8');
+			await fs.writeFile(path.join(boardDir, 'events.jsonl'), '', 'utf8');
+			await fs.writeFile(path.join(taskDir, 'events.jsonl'), '', 'utf8');
+			await fs.writeFile(path.join(taskDir, 'task.json'), JSON.stringify({
+				schema: 'mpi-kanban/task-card/v1',
+				id: 'MPI-1',
+				title: 'Checklist task',
+				column: 'doing',
+				maturity: 'planned',
+				status: 'active',
+				created_at: '2026-05-31T00:00:00.000Z',
+				updated_at: '2026-05-31T00:00:00.000Z',
+				links: {
+					brief: 'brief.md',
+					plan: 'plan.md',
+					checklist: 'checklist.md',
+					validation: 'validation.md',
+					files: 'files.json',
+					events: 'events.jsonl',
+					handoffs: 'handoffs/',
+					research: 'research/',
+				},
+			}, null, 2), 'utf8');
+			await fs.writeFile(path.join(taskDir, 'checklist.md'), '# Checklist\n\n- [ ] User confirms setup\n- [x] Agent verifies output\n', 'utf8');
+
+			const folder: vscode.WorkspaceFolder = {
+				uri: vscode.Uri.file(tempDir),
+				name: 'json-board',
+				index: 0,
+			};
+			const store = new TaskBoardStore(folder);
+			const board = await store.toggleChecklistItem('MPI-1', 0, true, { text: 'User confirms setup', completed: false });
+
+			assert.deepStrictEqual(board.columns.map(column => column.tasks.map(task => task.id)), [[], ['MPI-1'], []]);
+
+			const checklist = await fs.readFile(path.join(taskDir, 'checklist.md'), 'utf8');
+			assert.match(checklist, /- \[x\] User confirms setup/);
+			assert.match(checklist, /- \[x\] Agent verifies output/);
+
+			const events = await fs.readFile(path.join(taskDir, 'events.jsonl'), 'utf8');
+			assert.match(events, /"type":"checklist\.item_checked"/);
+			assert.match(events, /"actor":"user"/);
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
 });

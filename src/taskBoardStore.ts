@@ -44,6 +44,7 @@ export interface TaskCard {
 export interface ChecklistItem {
 	text: string;
 	completed: boolean;
+	line?: number;
 }
 
 export interface WebviewTask extends TaskCard {
@@ -80,6 +81,10 @@ interface EventPayload {
 	summary: string;
 	from?: TaskColumnId;
 	to?: TaskColumnId;
+}
+
+interface ParsedChecklistItem extends ChecklistItem {
+	line: number;
 }
 
 const BOARD_RELATIVE_PATH = ['.agents', 'mpi-kanban', 'board.json'];
@@ -326,6 +331,56 @@ export class TaskBoardStore {
 		return this.loadWebviewBoard();
 	}
 
+	public async toggleChecklistItem(
+		taskId: string,
+		itemIndex: number,
+		completed: boolean,
+		expected?: { text?: string; completed?: boolean }
+	): Promise<WebviewBoard> {
+		const task = await this.readTask(taskId);
+		const checklistPath = task.links.checklist;
+		if (!checklistPath) {
+			throw new Error(`${taskId} has no checklist link.`);
+		}
+
+		const uri = vscode.Uri.joinPath(this.taskFolderUri(taskId), ...checklistPath.split('/').filter(Boolean));
+		const content = await this.readText(uri);
+		const lines = content.split(/\r?\n/);
+		const items = this.parseChecklistLines(lines);
+		const item = items[itemIndex];
+		if (!item) {
+			throw new Error(`${taskId} checklist item ${itemIndex + 1} was not found. Reload the board and try again.`);
+		}
+
+		if (
+			(expected?.text !== undefined && expected.text !== item.text) ||
+			(expected?.completed !== undefined && expected.completed !== item.completed)
+		) {
+			throw new Error(`${taskId} checklist changed on disk. Reload the board and try again.`);
+		}
+
+		const match = lines[item.line].match(/^(\s*[-*]\s+\[)([ xX])(\]\s+.+)$/);
+		if (!match) {
+			throw new Error(`${taskId} checklist item ${itemIndex + 1} can no longer be toggled.`);
+		}
+
+		const now = new Date().toISOString();
+		lines[item.line] = `${match[1]}${completed ? 'x' : ' '}${match[3]}`;
+		await this.writeText(uri, lines.join('\n'));
+
+		task.updated_at = now;
+		await this.writeTask(task);
+		await this.appendEvent({
+			type: completed ? 'checklist.item_checked' : 'checklist.item_unchecked',
+			id: taskId,
+			at: now,
+			actor: 'user',
+			summary: `${completed ? 'Checked' : 'Unchecked'} checklist item ${itemIndex + 1} for ${taskId}: ${item.text}`,
+		}, taskId);
+
+		return this.loadWebviewBoard();
+	}
+
 	public async deleteTask(taskId: string): Promise<WebviewBoard> {
 		const board = await this.readBoard();
 		const now = new Date().toISOString();
@@ -456,14 +511,19 @@ export class TaskBoardStore {
 		try {
 			const uri = vscode.Uri.joinPath(this.taskFolderUri(task.id), ...checklistPath.split('/').filter(Boolean));
 			const content = await this.readText(uri);
-			return content
-				.split(/\r?\n/)
-				.map(line => line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.+)$/))
-				.filter((match): match is RegExpMatchArray => Boolean(match))
-				.map(match => ({ completed: match[1].toLowerCase() === 'x', text: match[2].trim() }));
+			return this.parseChecklistLines(content.split(/\r?\n/));
 		} catch {
 			return [];
 		}
+	}
+
+	private parseChecklistLines(lines: string[]): ParsedChecklistItem[] {
+		return lines
+			.map((line, index) => {
+				const match = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.+)$/);
+				return match ? { completed: match[1].toLowerCase() === 'x', text: match[2].trim(), line: index } : undefined;
+			})
+			.filter((item): item is ParsedChecklistItem => Boolean(item));
 	}
 
 	private async readJson<T>(uri: vscode.Uri): Promise<T> {

@@ -17,3 +17,9 @@
 {"schema":"mpi-kanban/event/v1","type":"attention.required","id":"MPI-3","at":"2026-05-30T19:19:10.230Z","actor":"vscode","summary":"Moved back to To do; reconcile active work state."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-3","at":"2026-05-30T19:20:42.240Z","actor":"vscode","from":"todo","to":"doing","summary":"Moved MPI-3 from To do to Doing."}
 {"schema":"mpi-kanban/event/v1","type":"attention.required","id":"MPI-3","at":"2026-05-30T19:20:42.240Z","actor":"vscode","summary":"Moved back to To do; reconcile active work state."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-3","at":"2026-05-31T06:33:01.950Z","actor":"vscode","from":"doing","to":"done","summary":"Moved MPI-3 from Doing to Done."}
+{"schema":"mpi-kanban/event/v1","type":"attention.cleared","id":"MPI-3","at":"2026-05-31T06:33:01.950Z","actor":"vscode","summary":"Cleared attention for MPI-3."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-3","at":"2026-05-31T06:33:05.806Z","actor":"vscode","from":"done","to":"doing","summary":"Moved MPI-3 from Done to Doing."}
+{"schema":"mpi-kanban/event/v1","type":"attention.required","id":"MPI-3","at":"2026-05-31T06:33:05.806Z","actor":"vscode","summary":"Reopened from Done; agent reconciliation may be needed."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-3","at":"2026-05-31T06:33:28.720Z","actor":"vscode","from":"doing","to":"done","summary":"Moved MPI-3 from Doing to Done."}
+{"schema":"mpi-kanban/event/v1","type":"attention.cleared","id":"MPI-3","at":"2026-05-31T06:33:28.720Z","actor":"vscode","summary":"Cleared attention for MPI-3."}

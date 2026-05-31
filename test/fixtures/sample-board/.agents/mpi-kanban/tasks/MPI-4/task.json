@@ -3,11 +3,11 @@
   "id": "MPI-4",
   "title": "Fix some bug.",
   "description": "Some bug needs fixing. Please fix it now. Thank you.",
-  "column": "doing",
+  "column": "todo",
   "maturity": "planned",
-  "status": "active",
+  "status": "pending",
   "created_at": "2026-05-30T17:24:11.966Z",
-  "updated_at": "2026-05-30T19:20:35.359Z",
+  "updated_at": "2026-05-31T07:03:17.455Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -20,7 +20,7 @@
   },
   "attention": {
     "state": "required",
-    "reason": "Reopened from Done; agent reconciliation may be needed.",
-    "updated_at": "2026-05-30T19:20:35.359Z"
+    "reason": "Moved back to To do; reconcile active work state.",
+    "updated_at": "2026-05-31T07:03:17.455Z"
   }
 }

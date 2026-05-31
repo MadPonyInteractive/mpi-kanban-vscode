@@ -4,7 +4,7 @@
   "title": "Draft JSON board release notes",
   "description": "Summarize the new task-board model for users.",
   "column": "todo",
-  "maturity": "planned",
+  "maturity": "idea",
   "status": "pending",
   "created_at": "2026-05-30T12:00:00Z",
   "updated_at": "2026-05-30T19:20:41.031Z",
