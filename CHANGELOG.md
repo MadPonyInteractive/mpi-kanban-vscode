@@ -1,3 +1,15 @@
+## [0.1.8] (2026-05-31)
+
+### Features
+
+* Add the JSON task board experience for `.agents/mpi-kanban/board.json` and
+  linked `.agents/mpi-kanban/tasks/<id>/` task workspaces.
+* Refine task panels and tint cards by maturity state for quicker board
+  scanning.
+* Update the Marketplace README and board screenshot to clarify that the VS
+  Code extension supports the Mpi-Kanban Agent Skills pack rather than acting as
+  a standalone Kanban plugin.
+
 ## [0.1.7] (2026-05-27)
 
 ### Features
