@@ -4,6 +4,7 @@ let currentBoard = null
 let selectedTaskId = null
 let editingTask = null
 let dragState = null
+let noticeTimeout = null
 
 window.addEventListener('message', event => {
   const message = event.data
@@ -13,6 +14,8 @@ window.addEventListener('message', event => {
       selectedTaskId = firstTaskId(currentBoard)
     }
     renderBoard()
+  } else if (message.type === 'boardNotice') {
+    showBoardNotice(message.kind, message.text)
   }
 })
 
@@ -26,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <button class="primary-button" id="add-task-button" type="button">Add Task</button>
       </header>
+      <div class="board-notice" id="board-notice" role="status" hidden></div>
       <section class="task-board-layout">
         <div class="kanban-board" id="kanban-board"></div>
         <aside class="task-detail-panel" id="task-detail-panel"></aside>
@@ -100,7 +104,9 @@ function createColumn (column) {
 
 function createTaskCard (task, columnId) {
   const card = document.createElement('article')
-  card.className = `task-item ${task.id === selectedTaskId ? 'selected' : ''}`
+  const maturityClass = task.maturity ? `maturity-${task.maturity}` : ''
+  const attentionClass = task.attention?.state === 'required' ? 'attention-required' : ''
+  card.className = `task-item ${task.id === selectedTaskId ? 'selected' : ''} ${maturityClass} ${attentionClass}`.trim()
   card.draggable = true
   card.dataset.taskId = task.id
   card.dataset.columnId = columnId
@@ -123,17 +129,17 @@ function createTaskCard (task, columnId) {
   `
 
   card.addEventListener('click', event => {
-    if (event.target.closest('button')) return
+    if (isInteractiveCardTarget(event.target)) return
     selectedTaskId = task.id
     renderBoard()
   })
   card.addEventListener('dblclick', event => {
-    if (event.target.closest('button')) return
+    if (isInteractiveCardTarget(event.target)) return
     selectedTaskId = task.id
     renderDetailPanel()
   })
   card.addEventListener('dragstart', event => {
-    if (event.target.closest('button')) {
+    if (isInteractiveCardTarget(event.target)) {
       event.preventDefault()
       return
     }
@@ -159,18 +165,65 @@ function createTaskCard (task, columnId) {
     event.stopPropagation()
     deleteTask(task.id, columnId)
   })
+  card.querySelectorAll('.checklist-toggle').forEach(toggle => {
+    toggle.addEventListener('change', event => {
+      event.preventDefault()
+      event.stopPropagation()
+      selectedTaskId = task.id
+      const itemIndex = Number(toggle.dataset.itemIndex)
+      const previousCompleted = toggle.dataset.completed === 'true'
+      toggle.disabled = true
+      if (task.activeSessionTitle) {
+        showBoardNotice('warning', 'Active work is attached to this task. The checklist will update, but the agent may need to reconcile it.')
+      }
+      vscode.postMessage({
+        type: 'toggleChecklistItem',
+        taskId: task.id,
+        itemIndex,
+        completed: toggle.checked,
+        expected: {
+          text: toggle.dataset.itemText,
+          completed: previousCompleted,
+        },
+      })
+    })
+  })
   return card
 }
 
 function createChecklistPreview (items = []) {
   if (items.length === 0) return ''
-  const visible = items.slice(0, 5).map(item => `
+  const visible = items.slice(0, 5).map((item, index) => `
     <li class="${item.completed ? 'completed' : ''}">
-      <span>${item.completed ? '[x]' : '[ ]'}</span>
-      ${escapeHtml(item.text)}
+      <input
+        class="checklist-toggle"
+        type="checkbox"
+        data-item-index="${index}"
+        data-item-text="${escapeHtml(item.text)}"
+        data-completed="${item.completed ? 'true' : 'false'}"
+        title="Toggle checklist item"
+        ${item.completed ? 'checked' : ''}
+      >
+      <span>${escapeHtml(item.text)}</span>
     </li>
   `).join('')
   return `<ul class="checklist-preview">${visible}</ul>`
+}
+
+function isInteractiveCardTarget (target) {
+  return Boolean(target.closest('button, input, label, textarea, select, a'))
+}
+
+function showBoardNotice (kind = 'warning', text = '') {
+  const notice = document.getElementById('board-notice')
+  if (!notice || !text) return
+  notice.className = `board-notice ${kind}`
+  notice.textContent = text
+  notice.hidden = false
+  window.clearTimeout(noticeTimeout)
+  noticeTimeout = window.setTimeout(() => {
+    notice.hidden = true
+  }, 4200)
 }
 
 function setupColumnDrop (columnElement, columnId) {

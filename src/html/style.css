@@ -225,6 +225,30 @@ body.filters-visible {
     display: none;
 }
 
+/* Maturity background tint. Theme-aware via color-mix over the editor
+   background. Each maturity gets a distinct hue (no two adjacent steps share a
+   color family); alpha kept low enough that white card text stays readable. */
+.task-item.maturity-idea {
+    /* raw/unplanned: keep neutral editor background, no tint */
+    background-color: var(--vscode-editor-background);
+}
+.task-item.maturity-planned {
+    background-color: color-mix(in srgb, #4aa3ff 16%, var(--vscode-editor-background));
+}
+/* in-progress: purple, deliberately off the blue family so it never reads
+   like "planned". */
+.task-item.maturity-in-progress {
+    background-color: color-mix(in srgb, #b072ff 18%, var(--vscode-editor-background));
+}
+/* Accept both "validating" (canonical) and "validated" (legacy fixtures). */
+.task-item.maturity-validating,
+.task-item.maturity-validated {
+    background-color: color-mix(in srgb, #ffd21f 16%, var(--vscode-editor-background));
+}
+.task-item.maturity-complete {
+    background-color: color-mix(in srgb, #2fd96b 16%, var(--vscode-editor-background));
+}
+
 .task-header {
     display: flex;
     justify-content: space-between;
@@ -1015,6 +1039,29 @@ body.filters-visible {
     font-size: 12px;
 }
 
+.board-notice {
+    position: fixed;
+    top: 14px;
+    right: 18px;
+    z-index: 1100;
+    max-width: min(420px, calc(100vw - 36px));
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+.board-notice[hidden] {
+    display: none;
+}
+
+.board-notice.warning {
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-panel-border));
+    background: var(--vscode-inputValidation-warningBackground);
+    color: var(--vscode-inputValidation-warningForeground);
+}
+
 .task-board-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
@@ -1132,8 +1179,15 @@ body.filters-visible {
 
 .checklist-preview li {
     display: flex;
+    align-items: flex-start;
     gap: 6px;
     margin-bottom: 4px;
+}
+
+.checklist-preview input[type="checkbox"] {
+    flex: 0 0 auto;
+    margin: 1px 0 0;
+    cursor: pointer;
 }
 
 .checklist-preview li.completed {
