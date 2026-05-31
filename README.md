@@ -14,8 +14,8 @@ interactive board beside Claude Code, Codex, or another agent panel.
 
 ## Features
 
-- **MPI board contract**: opens `.agents/mpi-kanban/board.json` in the current
-  workspace.
+- **MPI board contract**: opens `.agents/mpi-kanban/board.json` in the selected
+  workspace root.
 - **Task board view**: displays fixed `To do`, `Doing`, and `Done` columns.
 - **Live reload**: watches `board.json` and task-card JSON files.
 - **Drag and drop**: moves whole cards between columns and appends task events.
@@ -44,6 +44,22 @@ The board file is normally created by the Mpi-Kanban Agent Skills pack when you
 start or continue MPI workflow work. Use
 `npx skills add MadPonyInteractive/mpi-kanban --all -y -g` to install or update
 the complete pack.
+
+### Multi-Root Workspaces
+
+In a multi-root `.code-workspace`, Mpi-Kanban uses one active Kanban root. When
+exactly one workspace folder contains `.agents/mpi-kanban/board.json`, that
+folder opens automatically. When multiple folders contain a board, the extension
+prompts you to select the active root and persists it in the workspace setting
+`mpi-kanban.kanbanRoot`.
+
+The setting accepts a workspace folder URI, filesystem path, or folder name.
+Changing `mpi-kanban.kanbanRoot` reloads an open board panel, and file watchers
+track the selected root even when it is not the first folder in the workspace.
+
+If no JSON board exists but the workspace contains MPI folders or legacy
+`kanban.md` files, Mpi-Kanban offers setup actions to install or update the
+skills pack, or to select a legacy root for migration when one is available.
 
 ### Legacy Markdown Boards
 

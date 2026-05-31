@@ -5,6 +5,7 @@ let selectedTaskId = null
 let editingTask = null
 let dragState = null
 let noticeTimeout = null
+const VALID_MATURITIES = new Set(['idea', 'planned', 'in-progress', 'validating', 'complete'])
 
 window.addEventListener('message', event => {
   const message = event.data
@@ -69,7 +70,9 @@ function renderBoard () {
   if (!currentBoard) return
 
   const workspaceLabel = document.getElementById('workspace-label')
-  workspaceLabel.textContent = currentBoard.workspaceName || ''
+  workspaceLabel.textContent = currentBoard.workspaceMember
+    ? `${currentBoard.workspaceMember.name} - ${currentBoard.workspaceMember.boardPath}`
+    : currentBoard.workspaceName || ''
 
   if (selectedTaskId && !findTask(selectedTaskId)) {
     selectedTaskId = firstTaskId(currentBoard)
@@ -104,7 +107,10 @@ function createColumn (column) {
 
 function createTaskCard (task, columnId) {
   const card = document.createElement('article')
-  const maturityClass = task.maturity ? `maturity-${task.maturity}` : ''
+  const hasInvalidMaturity = task.maturity && !VALID_MATURITIES.has(task.maturity)
+  const maturityClass = task.maturity
+    ? hasInvalidMaturity ? 'maturity-invalid' : `maturity-${safeClassName(task.maturity)}`
+    : ''
   const attentionClass = task.attention?.state === 'required' ? 'attention-required' : ''
   card.className = `task-item ${task.id === selectedTaskId ? 'selected' : ''} ${maturityClass} ${attentionClass}`.trim()
   card.draggable = true
@@ -118,7 +124,7 @@ function createTaskCard (task, columnId) {
     <h3 class="task-title">${escapeHtml(task.title)}</h3>
     ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
     <div class="task-badges">
-      ${task.maturity ? `<span>${escapeHtml(task.maturity)}</span>` : ''}
+      ${task.maturity ? `<span title="${hasInvalidMaturity ? 'Invalid maturity value' : 'Maturity'}">${escapeHtml(hasInvalidMaturity ? `invalid: ${task.maturity}` : task.maturity)}</span>` : ''}
       ${task.status ? `<span>${escapeHtml(task.status)}</span>` : ''}
     </div>
     ${columnId === 'doing' ? createChecklistPreview(task.checklist) : ''}
@@ -319,12 +325,13 @@ function renderDetailPanel () {
     return
   }
 
-  panel.className = `task-detail-panel ${task.maturity ? `detail-maturity-${safeClassName(task.maturity)}` : ''}`.trim()
+  const hasInvalidMaturity = task.maturity && !VALID_MATURITIES.has(task.maturity)
+  panel.className = `task-detail-panel ${task.maturity ? hasInvalidMaturity ? 'detail-maturity-invalid' : `detail-maturity-${safeClassName(task.maturity)}` : ''}`.trim()
 
   const primaryLinks = createDetailLinks(task, ['brief', 'plan', 'checklist', 'validation'])
   const artifactLinks = createDetailLinks(task, ['events', 'files', 'handoffs', 'research'])
   const stateBadges = [
-    task.maturity ? `<span class="detail-state-pill">${escapeHtml(task.maturity)}</span>` : '',
+    task.maturity ? `<span class="detail-state-pill" title="${hasInvalidMaturity ? 'Invalid maturity value' : 'Maturity'}">${escapeHtml(hasInvalidMaturity ? `invalid: ${task.maturity}` : task.maturity)}</span>` : '',
     task.status ? `<span class="detail-state-pill muted">${escapeHtml(task.status)}</span>` : '',
   ].join('')
 

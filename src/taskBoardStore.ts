@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { KanbanTask, MarkdownKanbanParser } from './markdownParser';
 
 export type TaskColumnId = 'todo' | 'doing' | 'done';
+const TODO_MATURITIES = new Set(['idea', 'planned']);
 
 export interface TaskBoardIndex {
 	schema: 'mpi-kanban/board/v1';
@@ -60,7 +61,17 @@ export interface WebviewColumn {
 export interface WebviewBoard {
 	title: string;
 	workspaceName: string;
+	workspaceMember: WebviewWorkspaceMember;
 	columns: WebviewColumn[];
+}
+
+export interface WebviewWorkspaceMember {
+	name: string;
+	index: number;
+	uri: string;
+	fsPath?: string;
+	boardPath: string;
+	isSelected: true;
 }
 
 export interface TaskInput {
@@ -71,6 +82,13 @@ export interface TaskInput {
 export interface LegacyBoardInfo {
 	uri: vscode.Uri;
 	relativePath: string;
+}
+
+export interface KanbanWorkspaceCandidate {
+	workspaceFolder: vscode.WorkspaceFolder;
+	hasBoard: boolean;
+	legacyBoard?: LegacyBoardInfo;
+	hasRelatedDirectory: boolean;
 }
 
 interface EventPayload {
@@ -88,9 +106,14 @@ interface ParsedChecklistItem extends ChecklistItem {
 }
 
 const BOARD_RELATIVE_PATH = ['.agents', 'mpi-kanban', 'board.json'];
+const BOARD_RELATIVE_DISPLAY_PATH = BOARD_RELATIVE_PATH.join('/');
 const LEGACY_BOARD_RELATIVE_PATHS = [
 	['.agents', 'mpi-kanban', 'kanban.md'],
 	['.claude', 'mpi-kanban', 'kanban.md'],
+];
+const RELATED_DIRECTORY_RELATIVE_PATHS = [
+	['.agents', 'mpi-kanban'],
+	['.claude', 'mpi-kanban'],
 ];
 const TASKS_RELATIVE_PATH = ['.agents', 'mpi-kanban', 'tasks'];
 const EVENTS_RELATIVE_PATH = ['.agents', 'mpi-kanban', 'events.jsonl'];
@@ -146,10 +169,61 @@ export class TaskBoardStore {
 		}
 
 		if (uri) {
-			return vscode.workspace.getWorkspaceFolder(uri) ?? folders[0];
+			return vscode.workspace.getWorkspaceFolder(uri);
 		}
 
 		return folders[0];
+	}
+
+	public static async findWorkspaceCandidates(): Promise<KanbanWorkspaceCandidate[]> {
+		const folders = vscode.workspace.workspaceFolders ?? [];
+		return Promise.all(folders.map(async workspaceFolder => {
+			const store = new TaskBoardStore(workspaceFolder);
+			const [hasBoard, legacyBoard, hasRelatedDirectory] = await Promise.all([
+				store.exists(),
+				store.findLegacyBoard(),
+				TaskBoardStore.hasRelatedDirectory(workspaceFolder),
+			]);
+
+			return {
+				workspaceFolder,
+				hasBoard,
+				legacyBoard,
+				hasRelatedDirectory,
+			};
+		}));
+	}
+
+	public static matchesWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder, value?: string): boolean {
+		const candidate = value?.trim();
+		if (!candidate) {
+			return false;
+		}
+
+		return [
+			workspaceFolder.uri.toString(),
+			workspaceFolder.uri.fsPath,
+			workspaceFolder.name,
+		].some(identifier => identifier.localeCompare(candidate, undefined, { sensitivity: 'accent' }) === 0);
+	}
+
+	public static workspaceFolderSettingValue(workspaceFolder: vscode.WorkspaceFolder): string {
+		return workspaceFolder.uri.toString();
+	}
+
+	private static async hasRelatedDirectory(workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> {
+		for (const relativePathParts of RELATED_DIRECTORY_RELATIVE_PATHS) {
+			try {
+				const stat = await vscode.workspace.fs.stat(vscode.Uri.joinPath(workspaceFolder.uri, ...relativePathParts));
+				if ((stat.type & vscode.FileType.Directory) !== 0) {
+					return true;
+				}
+			} catch {
+				// Keep looking for supported MPI workspace directories.
+			}
+		}
+
+		return false;
 	}
 
 	public async exists(): Promise<boolean> {
@@ -176,6 +250,17 @@ export class TaskBoardStore {
 		}
 
 		return undefined;
+	}
+
+	public workspaceMemberMetadata(): WebviewWorkspaceMember {
+		return {
+			name: this.workspaceFolder.name,
+			index: this.workspaceFolder.index,
+			uri: this.workspaceFolder.uri.toString(),
+			fsPath: this.workspaceFolder.uri.scheme === 'file' ? this.workspaceFolder.uri.fsPath : undefined,
+			boardPath: BOARD_RELATIVE_DISPLAY_PATH,
+			isSelected: true,
+		};
 	}
 
 	public async migrateLegacyBoard(legacyBoardInfo?: LegacyBoardInfo): Promise<WebviewBoard> {
@@ -284,6 +369,7 @@ export class TaskBoardStore {
 		return {
 			title: 'Mpi-Kanban',
 			workspaceName: this.workspaceFolder.name,
+			workspaceMember: this.workspaceMemberMetadata(),
 			columns,
 		};
 	}
@@ -583,12 +669,14 @@ export class TaskBoardStore {
 	private applyMoveSummary(task: TaskCard, fromColumnId: TaskColumnId, toColumnId: TaskColumnId, now: string): void {
 		if (toColumnId === 'doing') {
 			task.status = 'active';
-			task.maturity = task.maturity === 'idea' ? 'planned' : task.maturity;
+			task.maturity = task.maturity === 'validating' ? 'validating' : 'in-progress';
 		} else if (toColumnId === 'done') {
 			task.status = 'completed';
+			task.maturity = 'complete';
 			task.attention = { state: 'cleared', updated_at: now };
 		} else if (toColumnId === 'todo') {
 			task.status = 'pending';
+			task.maturity = TODO_MATURITIES.has(task.maturity ?? '') ? task.maturity : 'planned';
 		}
 
 		if (fromColumnId === 'done' && toColumnId === 'doing') {

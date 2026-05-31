@@ -3,7 +3,7 @@
   "displayName": "Mpi-Kanban",
   "description": "VS Code Kanban board for the MPI agent workflow.",
   "publisher": "MadPonyInteractive",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "author": {
     "name": "Madpony Interactive",
     "url": "https://github.com/MadPonyInteractive"
@@ -61,6 +61,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "Mpi-Kanban",
+      "properties": {
+        "mpi-kanban.kanbanRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Workspace folder URI, filesystem path, or name to use as the active Mpi-Kanban root in a multi-root workspace."
+        }
+      }
     }
   },
   "scripts": {

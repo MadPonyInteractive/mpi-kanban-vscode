@@ -1,3 +1,14 @@
+## [Unreleased]
+
+## [0.1.9] (2026-05-31)
+
+### Features
+
+* Add multi-root workspace Kanban-root selection with persisted
+  `mpi-kanban.kanbanRoot` support.
+* Watch board, task, and message state from the selected Kanban root even when
+  it is not the first workspace folder.
+
 ## [0.1.8] (2026-05-31)
 
 ### Features

@@ -248,6 +248,10 @@ body.filters-visible {
 .task-item.maturity-complete {
     background-color: color-mix(in srgb, #2fd96b 16%, var(--vscode-editor-background));
 }
+.task-item.maturity-invalid {
+    background-color: color-mix(in srgb, #ff4f64 18%, var(--vscode-editor-background));
+    border-color: color-mix(in srgb, #ff4f64 70%, var(--vscode-panel-border));
+}
 
 .task-header {
     display: flex;
@@ -1262,6 +1266,12 @@ body.filters-visible {
     --detail-state-color: #2fd96b;
     --detail-state-tint: color-mix(in srgb, #2fd96b 6%, var(--vscode-sideBar-background));
     border-color: color-mix(in srgb, #2fd96b 42%, var(--vscode-panel-border));
+}
+
+.task-detail-panel.detail-maturity-invalid {
+    --detail-state-color: #ff4f64;
+    --detail-state-tint: color-mix(in srgb, #ff4f64 8%, var(--vscode-sideBar-background));
+    border-color: color-mix(in srgb, #ff4f64 58%, var(--vscode-panel-border));
 }
 
 .detail-kicker {
