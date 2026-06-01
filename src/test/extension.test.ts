@@ -7,8 +7,9 @@ import * as path from 'path';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 // import * as myExtension from '../../extension';
+import { preferredPrimaryWorkspaceCandidate } from '../extension';
 import { MarkdownKanbanParser } from '../markdownParser';
-import { extractPlanFilePath, mapLegacyColumn, TaskBoardStore } from '../taskBoardStore';
+import { extractPlanFilePath, KanbanWorkspaceCandidate, mapLegacyColumn, TaskBoardStore } from '../taskBoardStore';
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -122,6 +123,64 @@ suite('Extension Test Suite', () => {
 			await fs.rm(emptyDir, { recursive: true, force: true });
 			await fs.rm(activeDir, { recursive: true, force: true });
 		}
+	});
+
+	test('Prefers the primary workspace folder when it has a legacy board', () => {
+		const parentFolder: vscode.WorkspaceFolder = {
+			uri: vscode.Uri.file(path.join(os.tmpdir(), 'cubric-vision')),
+			name: 'Cubric-Vision',
+			index: 0,
+		};
+		const childFolder: vscode.WorkspaceFolder = {
+			uri: vscode.Uri.file(path.join(os.tmpdir(), 'cubric-vision', 'MadPony-Identity')),
+			name: 'MadPony-Identity',
+			index: 1,
+		};
+		const candidates: KanbanWorkspaceCandidate[] = [
+			{
+				workspaceFolder: parentFolder,
+				hasBoard: false,
+				legacyBoard: {
+					uri: vscode.Uri.joinPath(parentFolder.uri, '.agents', 'mpi-kanban', 'kanban.md'),
+					relativePath: '.agents/mpi-kanban/kanban.md',
+				},
+				hasRelatedDirectory: true,
+			},
+			{
+				workspaceFolder: childFolder,
+				hasBoard: true,
+				hasRelatedDirectory: true,
+			},
+		];
+
+		assert.strictEqual(preferredPrimaryWorkspaceCandidate(candidates)?.workspaceFolder.name, 'Cubric-Vision');
+	});
+
+	test('Does not prefer an unrelated primary workspace folder over a child board', () => {
+		const parentFolder: vscode.WorkspaceFolder = {
+			uri: vscode.Uri.file(path.join(os.tmpdir(), 'container')),
+			name: 'container',
+			index: 0,
+		};
+		const childFolder: vscode.WorkspaceFolder = {
+			uri: vscode.Uri.file(path.join(os.tmpdir(), 'container', 'MadPony-Identity')),
+			name: 'MadPony-Identity',
+			index: 1,
+		};
+		const candidates: KanbanWorkspaceCandidate[] = [
+			{
+				workspaceFolder: parentFolder,
+				hasBoard: false,
+				hasRelatedDirectory: false,
+			},
+			{
+				workspaceFolder: childFolder,
+				hasBoard: true,
+				hasRelatedDirectory: true,
+			},
+		];
+
+		assert.strictEqual(preferredPrimaryWorkspaceCandidate(candidates), undefined);
 	});
 
 	test('Migrates a legacy Markdown board into JSON task files', async () => {

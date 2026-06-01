@@ -48,9 +48,11 @@ the complete pack.
 ### Multi-Root Workspaces
 
 In a multi-root `.code-workspace`, Mpi-Kanban uses one active Kanban root. When
-exactly one workspace folder contains `.agents/mpi-kanban/board.json`, that
-folder opens automatically. When multiple folders contain a board, the extension
-prompts you to select the active root and persists it in the workspace setting
+the first workspace folder contains `.agents/mpi-kanban/board.json`, that main
+folder opens automatically. When the first workspace folder has a legacy
+`kanban.md`, Mpi-Kanban offers to migrate that root before opening nested child
+boards. When multiple non-primary folders contain a board, the extension prompts
+you to select the active root and persists it in the workspace setting
 `mpi-kanban.kanbanRoot`.
 
 The setting accepts a workspace folder URI, filesystem path, or folder name.

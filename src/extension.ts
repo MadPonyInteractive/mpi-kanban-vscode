@@ -24,7 +24,7 @@ function workspaceFoldersEqual(left: vscode.WorkspaceFolder, right: vscode.Works
 }
 
 function configuredKanbanRoot(): string {
-	return vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>(KANBAN_ROOT_SETTING, '');
+	return vscode.workspace.getConfiguration(CONFIG_SECTION).inspect<string>(KANBAN_ROOT_SETTING)?.workspaceValue ?? '';
 }
 
 async function persistKanbanRoot(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
@@ -58,6 +58,19 @@ async function pickCandidate(candidates: KanbanWorkspaceCandidate[], placeHolder
 	);
 
 	return selected?.candidate;
+}
+
+export function primaryWorkspaceCandidate(candidates: KanbanWorkspaceCandidate[]): KanbanWorkspaceCandidate | undefined {
+	return candidates.find(candidate => candidate.workspaceFolder.index === 0) ?? candidates[0];
+}
+
+export function preferredPrimaryWorkspaceCandidate(candidates: KanbanWorkspaceCandidate[]): KanbanWorkspaceCandidate | undefined {
+	const primaryCandidate = primaryWorkspaceCandidate(candidates);
+	if (primaryCandidate?.hasBoard || primaryCandidate?.legacyBoard) {
+		return primaryCandidate;
+	}
+
+	return undefined;
 }
 
 async function migrateLegacyStore(store: TaskBoardStore, legacyBoard = store.findLegacyBoard()): Promise<TaskBoardStore | undefined> {
@@ -148,6 +161,21 @@ async function resolveStore(options: ResolveStoreOptions = {}): Promise<TaskBoar
 	if (configuredCandidate?.hasBoard) {
 		await refreshContextKey(candidates);
 		return new TaskBoardStore(configuredCandidate.workspaceFolder);
+	}
+
+	const primaryCandidate = preferredPrimaryWorkspaceCandidate(candidates);
+	if (primaryCandidate?.hasBoard) {
+		await refreshContextKey(candidates);
+		return new TaskBoardStore(primaryCandidate.workspaceFolder);
+	}
+
+	if (primaryCandidate?.legacyBoard) {
+		if (allowPrompt && showSetupMessages) {
+			return migrateLegacyStore(new TaskBoardStore(primaryCandidate.workspaceFolder), Promise.resolve(primaryCandidate.legacyBoard));
+		}
+
+		await refreshContextKey(candidates);
+		return undefined;
 	}
 
 	const boardCandidates = candidates.filter(candidate => candidate.hasBoard);

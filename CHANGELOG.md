@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.1.10] (2026-06-01)
+
+### Fixes
+
+* Prefer the first `.code-workspace` folder when it already has an MPI JSON or
+  legacy board, so nested child projects do not override the parent workspace
+  during migration.
+* Read `mpi-kanban.kanbanRoot` only from workspace settings to avoid inherited
+  root selections leaking across projects.
+
 ## [0.1.9] (2026-05-31)
 
 ### Features
