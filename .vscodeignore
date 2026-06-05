@@ -2,11 +2,17 @@
 src/**
 **/*.map
 
+# Compiled test output. packaged runtime files under out/ are still shipped.
+out/test/**
+
 # Build tooling.
 esbuild.js
 tsconfig.json
 eslint.config.mjs
 .vscode-test.mjs
+
+# Test fixtures.
+test/fixtures/**
 
 # Development dependencies and repository metadata.
 node_modules
