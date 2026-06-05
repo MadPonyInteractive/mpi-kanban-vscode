@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.1.11] (2026-06-05)
+
+### Fixes
+
+* Retry a task's `task.json` briefly when it is missing during a board load, so a
+  multi-file agent write that updates `board.json` before the task file is
+  visible no longer shows a transient "board loading error" ENOENT toast. A task
+  file that stays missing after the retry budget still surfaces a clear error.
+
 ## [0.1.10] (2026-06-01)
 
 ### Fixes

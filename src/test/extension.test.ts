@@ -357,4 +357,77 @@ suite('Extension Test Suite', () => {
 			await fs.rm(tempDir, { recursive: true, force: true });
 		}
 	});
+
+	test('Retries a task.json that appears shortly after board.json', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-kanban-race-'));
+		const boardDir = path.join(tempDir, '.agents', 'mpi-kanban');
+		const taskDir = path.join(boardDir, 'tasks', 'MPI-1');
+
+		try {
+			// board.json references MPI-1, but tasks/MPI-1/task.json does not exist
+			// yet, mimicking a multi-file agent write in progress.
+			await fs.mkdir(taskDir, { recursive: true });
+			await fs.writeFile(path.join(boardDir, 'board.json'), JSON.stringify({
+				schema: 'mpi-kanban/board/v1',
+				next_id: 2,
+				columns: { todo: ['MPI-1'], doing: [], done: [] },
+			}, null, 2), 'utf8');
+
+			const folder: vscode.WorkspaceFolder = {
+				uri: vscode.Uri.file(tempDir),
+				name: 'json-board',
+				index: 0,
+			};
+			const store = new TaskBoardStore(folder);
+
+			// Write task.json after the load has started but within the retry budget
+			// (3 attempts x 150ms). The load should heal silently, not throw ENOENT.
+			const writeLate = (async () => {
+				await new Promise(resolve => setTimeout(resolve, 200));
+				await fs.writeFile(path.join(taskDir, 'task.json'), JSON.stringify({
+					schema: 'mpi-kanban/task-card/v1',
+					id: 'MPI-1',
+					title: 'Late task',
+					column: 'todo',
+					maturity: 'planned',
+					status: 'active',
+					created_at: '2026-06-05T00:00:00.000Z',
+					updated_at: '2026-06-05T00:00:00.000Z',
+					links: { events: 'events.jsonl' },
+				}, null, 2), 'utf8');
+			})();
+
+			const [board] = await Promise.all([store.loadWebviewBoard(), writeLate]);
+			assert.deepStrictEqual(board.columns.map(column => column.tasks.map(task => task.id)), [['MPI-1'], [], []]);
+			assert.strictEqual(board.columns[0].tasks[0].title, 'Late task');
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
+	test('Surfaces a persistently missing task.json after the retry budget', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-kanban-missing-'));
+		const boardDir = path.join(tempDir, '.agents', 'mpi-kanban');
+
+		try {
+			// board.json references MPI-1 but the task file never appears.
+			await fs.mkdir(boardDir, { recursive: true });
+			await fs.writeFile(path.join(boardDir, 'board.json'), JSON.stringify({
+				schema: 'mpi-kanban/board/v1',
+				next_id: 2,
+				columns: { todo: ['MPI-1'], doing: [], done: [] },
+			}, null, 2), 'utf8');
+
+			const folder: vscode.WorkspaceFolder = {
+				uri: vscode.Uri.file(tempDir),
+				name: 'json-board',
+				index: 0,
+			};
+			const store = new TaskBoardStore(folder);
+
+			await assert.rejects(store.loadWebviewBoard());
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
 });

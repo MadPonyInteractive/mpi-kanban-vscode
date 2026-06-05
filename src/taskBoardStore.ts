@@ -125,6 +125,17 @@ const COLUMN_LABELS: Record<TaskColumnId, string> = {
 };
 const COLUMN_IDS: TaskColumnId[] = ['todo', 'doing', 'done'];
 
+function delay(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isFileNotFound(error: unknown): boolean {
+	if (error instanceof vscode.FileSystemError) {
+		return error.code === 'FileNotFound';
+	}
+	return Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'ENOENT');
+}
+
 export function mapLegacyColumn(columnTitle: string): { column: TaskColumnId; maturity: string; status: string } {
 	switch (columnTitle.trim().toUpperCase()) {
 		case 'BACKLOG':
@@ -576,11 +587,30 @@ export class TaskBoardStore {
 	}
 
 	private async readTask(taskId: string): Promise<TaskCard> {
-		const task = await this.readJson<TaskCard>(this.taskJsonUri(taskId));
+		// Agents write board.json and tasks/<id>/task.json as separate files, so a
+		// new task ID can appear in board.json a few ms before its task.json is
+		// visible. Retry briefly on file-not-found to heal that race; a task file
+		// that is still missing after the retry budget surfaces normally.
+		const task = await this.readTaskJsonWithRetry(taskId);
 		if (task.schema !== 'mpi-kanban/task-card/v1') {
 			throw new Error(`${taskId} has unsupported task schema.`);
 		}
 		return task;
+	}
+
+	private async readTaskJsonWithRetry(taskId: string): Promise<TaskCard> {
+		const attempts = 3;
+		const delayMs = 150;
+		for (let attempt = 1; ; attempt++) {
+			try {
+				return await this.readJson<TaskCard>(this.taskJsonUri(taskId));
+			} catch (error) {
+				if (attempt >= attempts || !isFileNotFound(error)) {
+					throw error;
+				}
+				await delay(delayMs);
+			}
+		}
 	}
 
 	private async writeTask(task: TaskCard): Promise<void> {
