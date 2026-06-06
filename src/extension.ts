@@ -240,7 +240,7 @@ async function openWorkspaceKanban(context: vscode.ExtensionContext, uri?: vscod
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Mpi-Kanban extension is now active.');
 	let reloadTimer: NodeJS.Timeout | undefined;
-	let lastSeenMtime = 0;
+	let lastSeenSignature = '';
 
 	if (vscode.window.registerWebviewPanelSerializer) {
 		vscode.window.registerWebviewPanelSerializer(KanbanWebviewPanel.viewType, {
@@ -294,8 +294,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const store = await resolveStore({ allowPrompt: false, showSetupMessages: false });
 			if (store && KanbanWebviewPanel.currentPanel) {
 				await KanbanWebviewPanel.currentPanel.loadTaskBoard(store);
-				const stat = await vscode.workspace.fs.stat(store.boardUri);
-				lastSeenMtime = stat.mtime;
+				lastSeenSignature = await store.boardSignature();
 			}
 		} catch (error) {
 			console.error('Failed to reload Mpi-Kanban board:', error);
@@ -336,12 +335,12 @@ export function activate(context: vscode.ExtensionContext) {
 					return;
 				}
 
-				const stat = await vscode.workspace.fs.stat(store.boardUri);
-				if (lastSeenMtime !== 0 && stat.mtime === lastSeenMtime) {
+				const signature = await store.boardSignature();
+				if (lastSeenSignature !== '' && signature === lastSeenSignature) {
 					return;
 				}
 
-				lastSeenMtime = stat.mtime;
+				lastSeenSignature = signature;
 				scheduleReloadBoard();
 			} catch {
 				// Ignore transient file access errors during external writes.

@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [0.1.12] (2026-06-06)
+
+### Fixes
+
+* Reflect external agent edits on the open board without a manual reload. The
+  polling fallback now fingerprints `board.json` together with every
+  `tasks/<id>/task.json` (mtime and size) instead of watching only the
+  `board.json` mtime. Agent edits that touch a single `task.json` (maturity,
+  title, status, description) — which the VS Code file watcher misses for
+  external-process writes on Windows, and which a `board.json`-only check never
+  observed — are now picked up automatically within the poll interval, so the
+  board no longer requires re-running the open command to show updates.
+
 ## [0.1.11] (2026-06-05)
 
 ### Fixes

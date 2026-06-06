@@ -173,6 +173,47 @@ export class TaskBoardStore {
 		return vscode.Uri.joinPath(this.workspaceFolder.uri, ...EVENTS_RELATIVE_PATH);
 	}
 
+	public get tasksUri(): vscode.Uri {
+		return vscode.Uri.joinPath(this.workspaceFolder.uri, ...TASKS_RELATIVE_PATH);
+	}
+
+	/**
+	 * Cheap change-detection fingerprint covering board.json and every
+	 * tasks/<id>/task.json. Used by the polling fallback because VS Code's
+	 * FileSystemWatcher misses writes from external processes (agents writing
+	 * via their own CLIs) on Windows, and because writeTask() updates only
+	 * task.json, which a board.json-only mtime check never observes.
+	 */
+	public async boardSignature(): Promise<string> {
+		const parts: string[] = [];
+
+		try {
+			const stat = await vscode.workspace.fs.stat(this.boardUri);
+			parts.push(`board:${stat.mtime}:${stat.size}`);
+		} catch {
+			parts.push('board:absent');
+		}
+
+		try {
+			const entries = await vscode.workspace.fs.readDirectory(this.tasksUri);
+			for (const [name, type] of entries) {
+				if (type !== vscode.FileType.Directory) {
+					continue;
+				}
+				try {
+					const stat = await vscode.workspace.fs.stat(this.taskJsonUri(name));
+					parts.push(`${name}:${stat.mtime}:${stat.size}`);
+				} catch {
+					// task folder without task.json yet; ignore.
+				}
+			}
+		} catch {
+			// tasks directory missing; board-only signature is fine.
+		}
+
+		return parts.join('|');
+	}
+
 	public static findWorkspaceFolder(uri?: vscode.Uri): vscode.WorkspaceFolder | undefined {
 		const folders = vscode.workspace.workspaceFolders;
 		if (!folders || folders.length === 0) {
