@@ -288,6 +288,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const boardWatcher = vscode.workspace.createFileSystemWatcher('**/.agents/mpi-kanban/board.json');
 	const taskWatcher = vscode.workspace.createFileSystemWatcher('**/.agents/mpi-kanban/tasks/*/task.json');
+	const checklistWatcher = vscode.workspace.createFileSystemWatcher('**/.agents/mpi-kanban/tasks/*/checklist.md');
 
 	const reloadBoard = async () => {
 		try {
@@ -312,7 +313,10 @@ export function activate(context: vscode.ExtensionContext) {
 	};
 
 	const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-		if (document.uri.fsPath.endsWith('task.json') || document.uri.fsPath.endsWith('board.json')) {
+		const fsPath = document.uri.fsPath;
+		const isMpiBoardFile = /[\\/]\.agents[\\/]mpi-kanban[\\/]/.test(fsPath)
+			&& (fsPath.endsWith('task.json') || fsPath.endsWith('board.json') || fsPath.endsWith('checklist.md'));
+		if (isMpiBoardFile) {
 			void reloadBoard();
 		}
 	});
@@ -354,6 +358,7 @@ export function activate(context: vscode.ExtensionContext) {
 		installSkillsCommand,
 		boardWatcher,
 		taskWatcher,
+		checklistWatcher,
 		boardWatcher.onDidCreate(async () => {
 			await refreshContextKey();
 			scheduleReloadBoard();
@@ -366,6 +371,9 @@ export function activate(context: vscode.ExtensionContext) {
 		taskWatcher.onDidCreate(scheduleReloadBoard),
 		taskWatcher.onDidChange(scheduleReloadBoard),
 		taskWatcher.onDidDelete(scheduleReloadBoard),
+		checklistWatcher.onDidCreate(scheduleReloadBoard),
+		checklistWatcher.onDidChange(scheduleReloadBoard),
+		checklistWatcher.onDidDelete(scheduleReloadBoard),
 		saveListener,
 		configurationListener,
 		new vscode.Disposable(() => clearInterval(pollForExternalChanges)),

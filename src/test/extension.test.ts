@@ -308,6 +308,50 @@ suite('Extension Test Suite', () => {
 		}
 	});
 
+	test('boardSignature changes when only checklist.md is edited externally', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-kanban-sig-'));
+		const boardDir = path.join(tempDir, '.agents', 'mpi-kanban');
+		const taskDir = path.join(boardDir, 'tasks', 'MPI-1');
+
+		try {
+			await fs.mkdir(taskDir, { recursive: true });
+			await fs.writeFile(path.join(boardDir, 'board.json'), JSON.stringify({
+				schema: 'mpi-kanban/board/v1',
+				next_id: 2,
+				columns: { todo: [], doing: ['MPI-1'], done: [] },
+			}, null, 2), 'utf8');
+			await fs.writeFile(path.join(taskDir, 'task.json'), JSON.stringify({
+				schema: 'mpi-kanban/task-card/v1',
+				id: 'MPI-1',
+				title: 'Checklist task',
+				column: 'doing',
+				maturity: 'in-progress',
+				status: 'active',
+				created_at: '2026-05-31T00:00:00.000Z',
+				updated_at: '2026-05-31T00:00:00.000Z',
+				links: { checklist: 'checklist.md' },
+			}, null, 2), 'utf8');
+			await fs.writeFile(path.join(taskDir, 'checklist.md'), '# Checklist\n\n- [ ] First step\n', 'utf8');
+
+			const folder: vscode.WorkspaceFolder = {
+				uri: vscode.Uri.file(tempDir),
+				name: 'json-board',
+				index: 0,
+			};
+			const store = new TaskBoardStore(folder);
+			const before = await store.boardSignature();
+
+			// Simulate an agent checking a box by editing only the markdown
+			// checklist, leaving task.json and board.json untouched.
+			await fs.writeFile(path.join(taskDir, 'checklist.md'), '# Checklist\n\n- [x] First step completed\n', 'utf8');
+			const after = await store.boardSignature();
+
+			assert.notStrictEqual(before, after, 'signature must change when checklist.md changes alone');
+		} finally {
+			await fs.rm(tempDir, { recursive: true, force: true });
+		}
+	});
+
 	test('Normalizes maturity when moving JSON tasks between columns', async () => {
 		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-kanban-move-'));
 		const boardDir = path.join(tempDir, '.agents', 'mpi-kanban');

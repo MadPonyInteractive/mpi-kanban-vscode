@@ -1,5 +1,23 @@
 ## [Unreleased]
 
+## [0.1.13] (2026-06-07)
+
+### Fixes
+
+* Reflect agent checklist edits on the open board without a manual reload. The
+  0.1.12 fingerprint covered `board.json` and every `tasks/<id>/task.json` but
+  not `checklist.md`, so an agent that checked a box by editing only the
+  markdown checklist (leaving `task.json` untouched) left the board stale until
+  it was closed and reopened. The polling fingerprint now also stats each
+  `tasks/<id>/checklist.md`, a dedicated `checklist.md` file watcher is
+  registered, and the save listener reloads on `checklist.md` saves.
+
+### Features
+
+* Add a **Refresh** button next to **Add Task** that reloads the board from disk
+  on demand, for the cases where the file watcher and poll still lag behind an
+  external write.
+
 ## [0.1.12] (2026-06-06)
 
 ### Fixes

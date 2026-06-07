@@ -1066,6 +1066,18 @@ body.filters-visible {
     color: var(--vscode-inputValidation-warningForeground);
 }
 
+.board-notice.info {
+    border: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-panel-border));
+    background: var(--vscode-inputValidation-infoBackground, var(--vscode-editorWidget-background));
+    color: var(--vscode-inputValidation-infoForeground, var(--vscode-foreground));
+}
+
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .task-board-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);

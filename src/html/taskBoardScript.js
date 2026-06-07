@@ -28,7 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <h1>Mpi-Kanban</h1>
           <p id="workspace-label"></p>
         </div>
-        <button class="primary-button" id="add-task-button" type="button">Add Task</button>
+        <div class="toolbar-actions">
+          <button class="secondary-button" id="refresh-board-button" type="button" title="Reload the board from disk">Refresh</button>
+          <button class="primary-button" id="add-task-button" type="button">Add Task</button>
+        </div>
       </header>
       <div class="board-notice" id="board-notice" role="status" hidden></div>
       <section class="task-board-layout">
@@ -55,6 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
   `
 
   document.getElementById('add-task-button').addEventListener('click', () => openTaskModal())
+  document.getElementById('refresh-board-button').addEventListener('click', () => {
+    showBoardNotice('info', 'Refreshing board from disk...')
+    vscode.postMessage({ type: 'refreshBoard' })
+  })
   document.getElementById('close-task-modal').addEventListener('click', closeTaskModal)
   document.getElementById('cancel-task-modal').addEventListener('click', closeTaskModal)
   document.getElementById('task-modal').addEventListener('click', event => {

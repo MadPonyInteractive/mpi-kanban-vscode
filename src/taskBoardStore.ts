@@ -178,11 +178,14 @@ export class TaskBoardStore {
 	}
 
 	/**
-	 * Cheap change-detection fingerprint covering board.json and every
-	 * tasks/<id>/task.json. Used by the polling fallback because VS Code's
-	 * FileSystemWatcher misses writes from external processes (agents writing
-	 * via their own CLIs) on Windows, and because writeTask() updates only
-	 * task.json, which a board.json-only mtime check never observes.
+	 * Cheap change-detection fingerprint covering board.json and, for every
+	 * task folder, task.json plus checklist.md. Used by the polling fallback
+	 * because VS Code's FileSystemWatcher misses writes from external processes
+	 * (agents writing via their own CLIs) on Windows. checklist.md must be in
+	 * the fingerprint because an agent can check a box by editing only the
+	 * markdown checklist without re-stamping task.json; a task.json-only
+	 * signature would never observe that and the board would stay stale until
+	 * the panel is closed and reopened.
 	 */
 	public async boardSignature(): Promise<string> {
 		const parts: string[] = [];
@@ -200,18 +203,24 @@ export class TaskBoardStore {
 				if (type !== vscode.FileType.Directory) {
 					continue;
 				}
-				try {
-					const stat = await vscode.workspace.fs.stat(this.taskJsonUri(name));
-					parts.push(`${name}:${stat.mtime}:${stat.size}`);
-				} catch {
-					// task folder without task.json yet; ignore.
-				}
+				await this.appendStatPart(parts, name, this.taskJsonUri(name));
+				await this.appendStatPart(parts, `${name}/checklist`, this.taskChecklistUri(name));
 			}
 		} catch {
 			// tasks directory missing; board-only signature is fine.
 		}
 
 		return parts.join('|');
+	}
+
+	private async appendStatPart(parts: string[], label: string, uri: vscode.Uri): Promise<void> {
+		try {
+			const stat = await vscode.workspace.fs.stat(uri);
+			parts.push(`${label}:${stat.mtime}:${stat.size}`);
+		} catch {
+			// File not present yet (e.g. task folder without task.json or no
+			// checklist.md); omit it from the fingerprint.
+		}
 	}
 
 	public static findWorkspaceFolder(uri?: vscode.Uri): vscode.WorkspaceFolder | undefined {
@@ -851,6 +860,10 @@ export class TaskBoardStore {
 
 	private taskEventsUri(taskId: string): vscode.Uri {
 		return vscode.Uri.joinPath(this.taskFolderUri(taskId), 'events.jsonl');
+	}
+
+	private taskChecklistUri(taskId: string): vscode.Uri {
+		return vscode.Uri.joinPath(this.taskFolderUri(taskId), 'checklist.md');
 	}
 
 	private async ensureTaskFolder(taskId: string): Promise<void> {

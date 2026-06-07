@@ -104,10 +104,21 @@ export class KanbanWebviewPanel {
             case 'toggleTask':
                 this.toggleTaskExpansion(message.taskId);
                 break;
+            case 'refreshBoard':
+                await this.refreshBoard();
+                break;
             case 'ready':
                 this.postBoard();
                 break;
         }
+    }
+
+    private async refreshBoard() {
+        if (!this._store) {
+            return;
+        }
+
+        await this.loadTaskBoard(this._store);
     }
 
     public async loadTaskBoard(store: TaskBoardStore) {
